@@ -2,8 +2,17 @@ const Player = require("./Player");
 const Game = require("./Game");
 const Card = require("./Card");
 const Score = require("./Score");
+const GamePlayer = require("./GamePlayer");
 
-// Relations
+Player.hasMany(Game, { foreignKey: "ownerId", as: "ownedGames" });
+Game.belongsTo(Player, { foreignKey: "ownerId", as: "owner" });
+
+GamePlayer.belongsTo(Player, { foreignKey: "playerId", as: "player" });
+GamePlayer.belongsTo(Game, { foreignKey: "gameId", as: "game" });
+
+Player.hasMany(GamePlayer, { foreignKey: "playerId", as: "gamePlayers" });
+Game.hasMany(GamePlayer, { foreignKey: "gameId", as: "gamePlayers" });
+
 Game.hasMany(Card, { foreignKey: "gameId", as: "cards" });
 Card.belongsTo(Game, { foreignKey: "gameId", as: "game" });
 
@@ -13,4 +22,19 @@ Score.belongsTo(Player, { foreignKey: "playerId", as: "player" });
 Game.hasMany(Score, { foreignKey: "gameId", as: "scores" });
 Score.belongsTo(Game, { foreignKey: "gameId", as: "game" });
 
-module.exports = { Player, Game, Card, Score };
+Player.hasMany(Game, { foreignKey: "currentPlayerId", as: "currentTurnGames" });
+Game.belongsTo(Player, { foreignKey: "currentPlayerId", as: "currentPlayer" });
+
+Player.belongsToMany(Game, {
+  through: GamePlayer,
+  foreignKey: "playerId",
+  as: "games",
+});
+
+Game.belongsToMany(Player, {
+  through: GamePlayer,
+  foreignKey: "gameId",
+  as: "players",
+});
+
+module.exports = { Player, Game, Card, Score, GamePlayer };
