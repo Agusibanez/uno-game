@@ -3,34 +3,33 @@
 ## Descripción
 
 Este proyecto implementa el backend del juego de cartas UNO mediante una API REST desarrollada en Node.js y Express.
-La API permite gestionar usuarios, juegos, jugadores, cartas y puntuaciones, además de manejar el flujo completo de una partida.
+La API permite gestionar usuarios, juegos, jugadores, cartas y puntuaciones, además de manejar el flujo básico de una partida (join, ready, start, end, state, players, scores).
 
-El sistema incluye autenticación basada en JWT y una colección de Postman para la prueba de todos los endpoints.
+Incluye autenticación basada en JWT y una colección de Postman para probar todos los endpoints.
 
 ---
 
 ## Arquitectura
 
-La solución está construida como una **API REST monolítica en capas**, donde cada capa tiene responsabilidades bien definidas:
+La solución está construida como una **API REST monolítica en capas** (Layered Architecture), con separación clara de responsabilidades:
 
-- **Capa de Presentación (API REST):** expone los endpoints HTTP y gestiona las solicitudes y respuestas.
-- **Capa de Lógica de Negocio:** contiene las reglas del juego UNO, validaciones y flujo de la partida.
-- **Capa de Persistencia:** gestiona el acceso a datos mediante un ORM y una base de datos relacional.
+- **Capa de Presentación (API REST):** expone endpoints HTTP (routes/controllers), aplica validaciones de entrada (middlewares) y transforma errores de dominio a respuestas HTTP.
+- **Capa de Lógica de Negocio (Domain/Services):** contiene reglas y flujo del juego (por ejemplo: join/ready/start/end), sin depender de detalles HTTP.
+- **Capa de Persistencia (Repositories + ORM):** encapsula el acceso a datos mediante repositorios; Sequelize y los modelos quedan aislados detrás de estos repositorios.
 
-La comunicación entre capas es unidireccional y desacoplada, lo que facilita el mantenimiento y la escalabilidad del proyecto.
+La dependencia entre capas es unidireccional: **Presentación → Negocio → Persistencia**, lo que permite mantener el código organizado y reducir el impacto de cambios (por ejemplo, cambiar el ORM afectaría principalmente a la capa de persistencia).
 
 ---
 
-## Implementación
+## Implementación (estructura del proyecto)
 
-A nivel de implementación, el proyecto organiza el código siguiendo un patrón de capas:
-
-- **Controllers:** reciben las solicitudes HTTP y delegan la lógica al servicio correspondiente.
-- **Services:** implementan la lógica de negocio del juego.
-- **Models:** definen las entidades y relaciones de la base de datos utilizando Sequelize ORM.
-- **Routes:** definen las rutas de la API.
-- **Middlewares:** manejan autenticación, autorización y validaciones.
-- **Utils:** manejo centralizado de errores y utilidades comunes.
+- **controllers/**: reciben requests y construyen responses (mensajes HTTP).
+- **services/**: lógica del dominio (reglas del juego, decisiones del flujo).
+- **repositories/**: operaciones de persistencia (abstraen Sequelize).
+- **models/**: entidades y relaciones (Sequelize).
+- **routes/**: definición de endpoints de la API.
+- **middlewares/**: autenticación, validaciones y manejo de errores.
+- **utils/**: utilidades comunes (async handler, errores de dominio, etc).
 
 ---
 
@@ -41,7 +40,7 @@ A nivel de implementación, el proyecto organiza el código siguiendo un patrón
 - PostgreSQL
 - Sequelize ORM
 - JWT (JSON Web Tokens)
-- Postman (para pruebas de la API)
+- Postman
 
 ---
 
@@ -60,23 +59,4 @@ A nivel de implementación, el proyecto organiza el código siguiendo un patrón
 ```bash
 git clone <URL_DEL_REPOSITORIO>
 cd capstone
-Instalar dependencias:
-
-npm install
-
-Crear un archivo .env con las siguientes variables:
-
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=uno_db
-DB_USER=uno_user
-DB_PASSWORD=uno12345
-JWT_SECRET=Juguemosaluno
-JWT_EXPIRES_IN=1d
-Iniciar la aplicación:
-
-npm start
-
-La API estará disponible en:
-
-http://localhost:3000
+```
