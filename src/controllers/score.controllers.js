@@ -1,32 +1,21 @@
 const service = require("../services/score.service");
+const asyncHandler = require("../utils/async-handler");
 
-async function create(req, res, next) {
-  try {
-    res.status(201).json(await service.createScore(req.body));
-  } catch (e) {
-    next(e);
-  }
-}
-async function read(req, res, next) {
-  try {
-    res.json(await service.getScore(req.params.id));
-  } catch (e) {
-    next(e);
-  }
-}
-async function update(req, res, next) {
-  try {
-    res.json(await service.updateScore(req.params.id, req.body));
-  } catch (e) {
-    next(e);
-  }
-}
-async function remove(req, res, next) {
-  try {
-    res.json(await service.deleteScore(req.params.id));
-  } catch (e) {
-    next(e);
-  }
-}
+const create = asyncHandler(async (req, res) => {
+  res.status(201).json(await service.createScore(req.body));
+});
+
+const read = asyncHandler(async (req, res) => {
+  res.json(await service.getScore(req.params.id));
+});
+
+const update = asyncHandler(async (req, res) => {
+  res.json(await service.updateScore(req.params.id, req.body));
+});
+
+const remove = asyncHandler(async (req, res) => {
+  await service.deleteScore(req.params.id);
+  res.json({ message: "Score deleted" });
+});
 
 module.exports = { create, read, update, remove };

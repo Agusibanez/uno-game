@@ -1,114 +1,70 @@
 const service = require("../services/game.service");
+const asyncHandler = require("../utils/async-handler");
 
-async function create(req, res, next) {
-  try {
-    res.status(201).json(await service.createGame(req.user.id, req.body));
-  } catch (e) {
-    next(e);
-  }
-}
+const create = asyncHandler(async (req, res) => {
+  const result = await service.createGame(req.user.id, req.body);
+  res
+    .status(201)
+    .json({ message: "Game created successfully", game_id: result.game_id });
+});
 
-async function read(req, res, next) {
-  try {
-    res.json(await service.getGame(req.params.id));
-  } catch (e) {
-    next(e);
-  }
-}
-async function update(req, res, next) {
-  try {
-    res.json(await service.updateGame(req.params.id, req.body));
-  } catch (e) {
-    next(e);
-  }
-}
-async function remove(req, res, next) {
-  try {
-    res.json(await service.deleteGame(req.params.id));
-  } catch (e) {
-    next(e);
-  }
-}
+const read = asyncHandler(async (req, res) => {
+  res.json(await service.getGame(req.params.id));
+});
 
-async function join(req, res, next) {
-  try {
-    res.json(await service.joinGame(Number(req.params.id), req.user.id));
-  } catch (e) {
-    next(e);
-  }
-}
+const update = asyncHandler(async (req, res) => {
+  res.json(await service.updateGame(req.params.id, req.body));
+});
 
-async function ready(req, res, next) {
-  try {
-    res.json(await service.readyGame(Number(req.params.id), req.user.id));
-  } catch (e) {
-    next(e);
-  }
-}
+const remove = asyncHandler(async (req, res) => {
+  await service.deleteGame(req.params.id);
+  res.json({ message: "Game deleted" });
+});
 
-async function start(req, res, next) {
-  try {
-    res.json(await service.startGame(Number(req.params.id), req.user.id));
-  } catch (e) {
-    next(e);
-  }
-}
+const join = asyncHandler(async (req, res) => {
+  await service.joinGame(Number(req.params.id), req.user.id);
+  res.json({ message: "User joined the game successfully" });
+});
 
-async function leave(req, res, next) {
-  try {
-    res.json(await service.leaveGame(Number(req.params.id), req.user.id));
-  } catch (e) {
-    next(e);
-  }
-}
+const ready = asyncHandler(async (req, res) => {
+  await service.readyGame(Number(req.params.id), req.user.id);
+  res.json({ message: "Player is ready" });
+});
 
-async function end(req, res, next) {
-  try {
-    res.json(await service.endGame(Number(req.params.id), req.user.id));
-  } catch (e) {
-    next(e);
-  }
-}
+const start = asyncHandler(async (req, res) => {
+  await service.startGame(Number(req.params.id), req.user.id);
+  res.json({ message: "Game started successfully" });
+});
 
-async function state(req, res, next) {
-  try {
-    res.json(await service.getGameState(Number(req.params.id)));
-  } catch (e) {
-    next(e);
-  }
-}
+const leave = asyncHandler(async (req, res) => {
+  await service.leaveGame(Number(req.params.id), req.user.id);
+  res.json({ message: "User left the game successfully" });
+});
 
-async function players(req, res, next) {
-  try {
-    res.json(await service.getGamePlayers(Number(req.params.id)));
-  } catch (e) {
-    next(e);
-  }
-}
+const end = asyncHandler(async (req, res) => {
+  await service.endGame(Number(req.params.id), req.user.id);
+  res.json({ message: "Game ended successfully" });
+});
 
-async function currentPlayer(req, res, next) {
-  try {
-    res.json(await service.getCurrentPlayer(Number(req.params.id)));
-  } catch (e) {
-    next(e);
-  }
-}
+const state = asyncHandler(async (req, res) => {
+  res.json(await service.getGameState(Number(req.params.id)));
+});
 
-async function topCard(req, res, next) {
-  try {
-    res.json(await service.getTopCard(Number(req.params.id)));
-  } catch (e) {
-    next(e);
-  }
-}
+const players = asyncHandler(async (req, res) => {
+  res.json(await service.getGamePlayers(Number(req.params.id)));
+});
 
-async function scores(req, res, next) {
-  try {
-    res.json(await service.getGameScores(Number(req.params.id)));
-  } catch (e) {
-    next(e);
-  }
-}
+const currentPlayer = asyncHandler(async (req, res) => {
+  res.json(await service.getCurrentPlayer(Number(req.params.id)));
+});
+
+const topCard = asyncHandler(async (req, res) => {
+  res.json(await service.getTopCard(Number(req.params.id)));
+});
+
+const scores = asyncHandler(async (req, res) => {
+  res.json(await service.getGameScores(Number(req.params.id)));
+});
 
 module.exports = {
   create,

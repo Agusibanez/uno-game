@@ -1,39 +1,46 @@
 const jwt = require("jsonwebtoken");
 const { Player } = require("../models");
-const { HttpError } = require("../utils/errors");
+const { UnauthorizedError } = require("../utils/domain-errors");
 
-async function authMiddleware(req, res, next) {
-  try {
-    const header = req.headers.authorization;
+function verifyJwt(token, secret) {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, secret, (err, payload) => {
+      if (err) return reject(err);
+      return resolve(payload);
+    });
+  });
+}
 
-    if (!header || !header.startsWith("Bearer ")) {
-      throw new HttpError(401, "Missing or invalid token");
-    }
+function authMiddleware(req, res, next) {
+  const header = req.headers.authorization;
 
-    const token = header.slice("Bearer ".length).trim();
-
-    let payload;
-    try {
-      payload = jwt.verify(token, process.env.JWT_SECRET);
-    } catch {
-      throw new HttpError(401, "Invalid token");
-    }
-
-    const user = await Player.findByPk(payload.id);
-    if (!user) throw new HttpError(401, "Invalid token");
-
-    const dbTokenVersion = user.tokenVersion || 0;
-    const tokenTokenVersion = payload.tokenVersion || 0;
-
-    if (dbTokenVersion !== tokenTokenVersion) {
-      throw new HttpError(401, "Invalid token");
-    }
-
-    req.user = { id: user.id, username: user.username };
-    return next();
-  } catch (e) {
-    return next(e);
+  if (!header || !header.startsWith("Bearer ")) {
+    return next(new UnauthorizedError("Missing or invalid token"));
   }
+
+  const token = header.slice("Bearer ".length).trim();
+
+  return verifyJwt(token, process.env.JWT_SECRET)
+    .then((payload) => {
+      if (!payload || !payload.id) {
+        throw new UnauthorizedError("Invalid token");
+      }
+
+      return Player.findByPk(payload.id).then((user) => {
+        if (!user) throw new UnauthorizedError("Invalid token");
+
+        const dbTokenVersion = user.tokenVersion || 0;
+        const tokenTokenVersion = payload.tokenVersion || 0;
+
+        if (dbTokenVersion !== tokenTokenVersion) {
+          throw new UnauthorizedError("Invalid token");
+        }
+
+        req.user = { id: user.id, username: user.username };
+        next();
+      });
+    })
+    .catch(() => next(new UnauthorizedError("Invalid token")));
 }
 
 module.exports = authMiddleware;
