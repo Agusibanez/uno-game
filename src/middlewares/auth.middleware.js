@@ -1,46 +1,67 @@
 const jwt = require("jsonwebtoken");
 const { Player } = require("../models");
 const { UnauthorizedError } = require("../utils/domain-errors");
+const { ok, err, ResultAsync } = require("../utils/result");
 
-function verifyJwt(token, secret) {
-  return new Promise((resolve, reject) => {
-    jwt.verify(token, secret, (err, payload) => {
-      if (err) return reject(err);
-      return resolve(payload);
-    });
-  });
+function parseBearer(header) {
+  if (!header || !header.startsWith("Bearer ")) {
+    return err(new UnauthorizedError("Missing or invalid token"));
+  }
+  const token = header.slice("Bearer ".length).trim();
+  if (!token) return err(new UnauthorizedError("Missing or invalid token"));
+  return ok(token);
+}
+
+function verifyJwtAsync(token) {
+  return ResultAsync.fromPromise(
+    () =>
+      new Promise((resolve, reject) => {
+        jwt.verify(token, process.env.JWT_SECRET, (e, payload) => {
+          if (e) return reject(e);
+          resolve(payload);
+        });
+      }),
+    () => new UnauthorizedError("Invalid token"),
+  );
+}
+
+function findUserAsync(id) {
+  return ResultAsync.fromPromise(
+    () => Player.findByPk(id),
+    () => new UnauthorizedError("Invalid token"),
+  ).chain((user) =>
+    user
+      ? ResultAsync.ok(user)
+      : ResultAsync.err(new UnauthorizedError("Invalid token")),
+  );
 }
 
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
 
-  if (!header || !header.startsWith("Bearer ")) {
-    return next(new UnauthorizedError("Missing or invalid token"));
-  }
+  const tokenResult = parseBearer(header);
+  if (tokenResult.isErr()) return next(tokenResult.error);
 
-  const token = header.slice("Bearer ".length).trim();
-
-  return verifyJwt(token, process.env.JWT_SECRET)
-    .then((payload) => {
+  return verifyJwtAsync(tokenResult.value)
+    .chain((payload) => {
       if (!payload || !payload.id) {
-        throw new UnauthorizedError("Invalid token");
+        return ResultAsync.err(new UnauthorizedError("Invalid token"));
+      }
+      return findUserAsync(payload.id).map((user) => ({ payload, user }));
+    })
+    .chain(({ payload, user }) => {
+      const dbTokenVersion = user.tokenVersion || 0;
+      const tokenTokenVersion = payload.tokenVersion || 0;
+
+      if (dbTokenVersion !== tokenTokenVersion) {
+        return ResultAsync.err(new UnauthorizedError("Invalid token"));
       }
 
-      return Player.findByPk(payload.id).then((user) => {
-        if (!user) throw new UnauthorizedError("Invalid token");
-
-        const dbTokenVersion = user.tokenVersion || 0;
-        const tokenTokenVersion = payload.tokenVersion || 0;
-
-        if (dbTokenVersion !== tokenTokenVersion) {
-          throw new UnauthorizedError("Invalid token");
-        }
-
-        req.user = { id: user.id, username: user.username };
-        next();
-      });
+      req.user = { id: user.id, username: user.username };
+      return ResultAsync.ok(true);
     })
-    .catch(() => next(new UnauthorizedError("Invalid token")));
+    .run()
+    .then((r) => (r.isErr() ? next(r.error) : next()));
 }
 
 module.exports = authMiddleware;
