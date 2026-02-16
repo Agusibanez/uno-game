@@ -5,18 +5,20 @@ const { registerAndLogin, createGame } = require("./helpers/factories");
 describe("Game Flow", () => {
   test("Join game OK (11) y players list (16)", async () => {
     const owner = await registerAndLogin({
-      username: "owner",
-      email: "owner@mail.com",
+      username: "owner_join",
+      email: "owner_join@mail.com",
     });
-    const p2 = await registerAndLogin({ username: "p2", email: "p2@mail.com" });
+    const p2 = await registerAndLogin({
+      username: "p2_join",
+      email: "p2_join@mail.com",
+    });
 
     const gameId = await createGame({
       token: owner.token,
-      title: "Game Flow",
+      title: "Game Flow Join",
       maxPlayers: 4,
     });
 
-    // p2 se une
     const join = await request(app)
       .post(`/api/games/${gameId}/join`)
       .set("Authorization", `Bearer ${p2.token}`);
@@ -24,22 +26,24 @@ describe("Game Flow", () => {
     expect(join.status).toBe(200);
     expect(join.body).toEqual({ message: "User joined the game successfully" });
 
-    // players list
     const players = await request(app).get(`/api/games/${gameId}/players`);
     expect(players.status).toBe(200);
-    expect(players.body.players).toContain("p2");
+    expect(players.body.players).toContain("p2_join");
   });
 
   test("Start game when ready (12) + state (15) + current player (17) + top card (18)", async () => {
     const owner = await registerAndLogin({
-      username: "owner",
-      email: "owner@mail.com",
+      username: "owner_start",
+      email: "owner_start@mail.com",
     });
-    const p2 = await registerAndLogin({ username: "p2", email: "p2@mail.com" });
+    const p2 = await registerAndLogin({
+      username: "p2_start",
+      email: "p2_start@mail.com",
+    });
 
     const gameId = await createGame({
       token: owner.token,
-      title: "Game Start",
+      title: "Game Flow Start",
       maxPlayers: 4,
     });
 
@@ -84,14 +88,17 @@ describe("Game Flow", () => {
 
   test("Leave game (13)", async () => {
     const owner = await registerAndLogin({
-      username: "owner",
-      email: "owner@mail.com",
+      username: "owner_leave",
+      email: "owner_leave@mail.com",
     });
-    const p2 = await registerAndLogin({ username: "p2", email: "p2@mail.com" });
+    const p2 = await registerAndLogin({
+      username: "p2_leave",
+      email: "p2_leave@mail.com",
+    });
 
     const gameId = await createGame({
       token: owner.token,
-      title: "Game Leave",
+      title: "Game Flow Leave",
       maxPlayers: 4,
     });
 
@@ -109,12 +116,13 @@ describe("Game Flow", () => {
 
   test("End game (14)", async () => {
     const owner = await registerAndLogin({
-      username: "owner",
-      email: "owner@mail.com",
+      username: "owner_end",
+      email: "owner_end@mail.com",
     });
+
     const gameId = await createGame({
       token: owner.token,
-      title: "Game End",
+      title: "Game Flow End",
       maxPlayers: 4,
     });
 
@@ -128,14 +136,17 @@ describe("Game Flow", () => {
 
   test("Scores endpoint (19): returns scores map", async () => {
     const owner = await registerAndLogin({
-      username: "owner",
-      email: "owner@mail.com",
+      username: "owner_scores",
+      email: "owner_scores@mail.com",
     });
-    const p2 = await registerAndLogin({ username: "p2", email: "p2@mail.com" });
+    const p2 = await registerAndLogin({
+      username: "p2_scores",
+      email: "p2_scores@mail.com",
+    });
 
     const gameId = await createGame({
       token: owner.token,
-      title: "Game Scores",
+      title: "Game Flow Scores",
       maxPlayers: 4,
     });
 
@@ -147,5 +158,109 @@ describe("Game Flow", () => {
     expect(scores.status).toBe(200);
     expect(scores.body).toHaveProperty("scores");
     expect(typeof scores.body.scores).toBe("object");
+  });
+
+  describe("Game Flow - Negative / Edge", () => {
+    test("Join twice -> 409", async () => {
+      const owner = await registerAndLogin({
+        username: "owner_dup",
+        email: "owner_dup@mail.com",
+      });
+      const p1 = await registerAndLogin({
+        username: "p_dup",
+        email: "p_dup@mail.com",
+      });
+
+      const gameId = await createGame({
+        token: owner.token,
+        title: "G-DUP",
+        maxPlayers: 2,
+      });
+
+      const j1 = await request(app)
+        .post(`/api/games/${gameId}/join`)
+        .set("Authorization", `Bearer ${p1.token}`);
+      expect(j1.status).toBe(200);
+
+      const j2 = await request(app)
+        .post(`/api/games/${gameId}/join`)
+        .set("Authorization", `Bearer ${p1.token}`);
+      expect(j2.status).toBe(409);
+    });
+
+    test("Start not owner -> 403", async () => {
+      const owner = await registerAndLogin({
+        username: "owner_forb",
+        email: "owner_forb@mail.com",
+      });
+      const p1 = await registerAndLogin({
+        username: "p_forb",
+        email: "p_forb@mail.com",
+      });
+
+      const gameId = await createGame({
+        token: owner.token,
+        title: "G-FORB",
+        maxPlayers: 2,
+      });
+
+      await request(app)
+        .post(`/api/games/${gameId}/join`)
+        .set("Authorization", `Bearer ${p1.token}`);
+
+      await request(app)
+        .post(`/api/games/${gameId}/ready`)
+        .set("Authorization", `Bearer ${owner.token}`);
+      await request(app)
+        .post(`/api/games/${gameId}/ready`)
+        .set("Authorization", `Bearer ${p1.token}`);
+
+      const start = await request(app)
+        .post(`/api/games/${gameId}/start`)
+        .set("Authorization", `Bearer ${p1.token}`);
+
+      expect(start.status).toBe(403);
+    });
+
+    test("Start without enough players -> 409", async () => {
+      const owner = await registerAndLogin({
+        username: "owner_np",
+        email: "owner_np@mail.com",
+      });
+
+      const gameId = await createGame({
+        token: owner.token,
+        title: "G-NP",
+        maxPlayers: 2,
+      });
+
+      await request(app)
+        .post(`/api/games/${gameId}/ready`)
+        .set("Authorization", `Bearer ${owner.token}`);
+
+      const start = await request(app)
+        .post(`/api/games/${gameId}/start`)
+        .set("Authorization", `Bearer ${owner.token}`);
+
+      expect(start.status).toBe(409);
+    });
+
+    test("Join non-existing game -> 404", async () => {
+      const p1 = await registerAndLogin({
+        username: "p_404",
+        email: "p_404@mail.com",
+      });
+
+      const join = await request(app)
+        .post(`/api/games/999999/join`)
+        .set("Authorization", `Bearer ${p1.token}`);
+
+      expect(join.status).toBe(404);
+    });
+
+    test("Ready without token -> 401", async () => {
+      const res = await request(app).post(`/api/games/1/ready`);
+      expect(res.status).toBe(401);
+    });
   });
 });

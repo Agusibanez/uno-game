@@ -81,4 +81,62 @@ describe("Auth", () => {
 
     expect(meRes.status).toBe(401);
   });
+  describe("Auth - Negative / Edge", () => {
+    test("Register missing fields -> 400", async () => {
+      const res = await request(app).post("/api/auth/register").send({
+        username: "ab",
+        // email missing
+        password: "password123",
+      });
+      expect(res.status).toBe(400);
+    });
+
+    test("Register invalid email -> 400", async () => {
+      const res = await request(app).post("/api/auth/register").send({
+        username: "alice",
+        email: "no-es-email",
+        password: "password123",
+      });
+      expect(res.status).toBe(400);
+    });
+
+    test("Register short password -> 400", async () => {
+      const res = await request(app).post("/api/auth/register").send({
+        username: "alice",
+        email: "alice2@example.com",
+        password: "123",
+      });
+      expect(res.status).toBe(400);
+    });
+
+    test("Login missing body -> 400", async () => {
+      const res = await request(app).post("/api/auth/login").send();
+      expect(res.status).toBe(400);
+    });
+
+    test("Login invalid credentials -> 401", async () => {
+      const res = await request(app).post("/api/auth/login").send({
+        username: "noexiste",
+        password: "password123",
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test("Me without token -> 401", async () => {
+      const res = await request(app).get("/api/auth/me");
+      expect(res.status).toBe(401);
+    });
+
+    test("Logout without token -> 401", async () => {
+      const res = await request(app).post("/api/auth/logout");
+      expect(res.status).toBe(401);
+    });
+
+    test("Me with invalid token -> 401", async () => {
+      const res = await request(app)
+        .get("/api/auth/me")
+        .set("Authorization", "Bearer invalid.token.here");
+      expect(res.status).toBe(401);
+    });
+  });
 });
