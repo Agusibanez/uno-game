@@ -13,9 +13,14 @@ async function registerAndLogin({
   const loginRes = await request(app)
     .post("/api/auth/login")
     .send({ username, password });
+
   const token = loginRes.body.access_token;
 
   return { token, username, email, password };
+}
+
+async function createUserAndLogin(username, email, password = "secret123") {
+  return registerAndLogin({ username, email, password });
 }
 
 async function createGame({ token, title = "Game 1", maxPlayers = 4 } = {}) {
@@ -27,4 +32,4 @@ async function createGame({ token, title = "Game 1", maxPlayers = 4 } = {}) {
   return res.body.game_id;
 }
 
-module.exports = { registerAndLogin, createGame };
+module.exports = { registerAndLogin, createUserAndLogin, createGame };

@@ -73,4 +73,34 @@ describe("Scores CRUD", () => {
     const read2 = await request(app).get(`/api/scores/${created.body.id}`);
     expect(read2.status).toBe(404);
   });
+
+  describe("Scores CRUD - Negative / Edge", () => {
+    test("Create score invalid body -> 400", async () => {
+      const res = await request(app).post("/api/scores").send("no-json");
+      expect(res.status).toBe(400);
+    });
+
+    test("Create score invalid score type -> 400", async () => {
+      const res = await request(app).post("/api/scores").send({
+        playerId: 1,
+        gameId: 1,
+        score: "10",
+      });
+      expect(res.status).toBe(400);
+    });
+
+    test("Create score invalid playerId -> 404", async () => {
+      const res = await request(app).post("/api/scores").send({
+        playerId: 999999,
+        gameId: 1,
+        score: 10,
+      });
+      expect(res.status).toBe(404);
+    });
+
+    test("Get score not found -> 404", async () => {
+      const res = await request(app).get("/api/scores/999999");
+      expect(res.status).toBe(404);
+    });
+  });
 });

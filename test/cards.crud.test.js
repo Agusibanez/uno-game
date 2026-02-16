@@ -59,4 +59,29 @@ describe("Cards CRUD", () => {
     const read2 = await request(app).get(`/api/cards/${created.body.id}`);
     expect(read2.status).toBe(404);
   });
+  describe("Cards CRUD - Negative / Edge", () => {
+    test("Create card invalid payload -> 400", async () => {
+      const res = await request(app).post("/api/cards").send({
+        color: "",
+        value: "",
+        gameId: "nope",
+      });
+      expect(res.status).toBe(400);
+      expect(Array.isArray(res.body.errors)).toBe(true);
+    });
+
+    test("Create card gameId not found -> 404", async () => {
+      const res = await request(app).post("/api/cards").send({
+        color: "red",
+        value: "5",
+        gameId: 999999,
+      });
+      expect(res.status).toBe(404);
+    });
+
+    test("Get card not found -> 404", async () => {
+      const res = await request(app).get("/api/cards/999999");
+      expect(res.status).toBe(404);
+    });
+  });
 });
