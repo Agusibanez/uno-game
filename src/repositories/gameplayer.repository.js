@@ -19,22 +19,29 @@ function destroyByGame(gameId) {
 function findAllByGame(gameId) {
   return GamePlayer.findAll({
     where: { gameId },
-    order: [["createdAt", "ASC"]],
+    order: [["turnOrder", "ASC"]],
   });
 }
 
 function findAllByGameWithPlayer(gameId) {
   return GamePlayer.findAll({
     where: { gameId },
-    include: [
-      { model: Player, as: "player", attributes: ["id", "username", "name"] },
-    ],
+    include: [{ model: Player, as: "player", attributes: ["id", "username", "name"] }],
+    order: [["turnOrder", "ASC"]],
   });
 }
 
-// ✅ ESTO ES LO QUE TE FALTA
-function setReady(gameId, playerId, isReady) {
-  return GamePlayer.update({ isReady }, { where: { gameId, playerId } });
+async function setReady(gameId, playerId, isReady) {
+  await GamePlayer.update({ isReady }, { where: { gameId, playerId } });
+  return GamePlayer.findOne({ where: { gameId, playerId } });
+}
+
+async function setUno(gameId, playerId, saidUno) {
+  await GamePlayer.update(
+    { saidUno, saidUnoAt: saidUno ? new Date() : null },
+    { where: { gameId, playerId } },
+  );
+  return GamePlayer.findOne({ where: { gameId, playerId } });
 }
 
 module.exports = {
@@ -45,4 +52,5 @@ module.exports = {
   findAllByGame,
   findAllByGameWithPlayer,
   setReady,
+  setUno,
 };

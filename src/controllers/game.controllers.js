@@ -1,5 +1,6 @@
 const service = require("../services/game.service");
 const asyncHandler = require("../utils/async-handler");
+const gameRulesService = require("../services/game.rules.service");
 
 const create = asyncHandler(async (req, res) => {
   const result = await service.createGame(req.user.id, req.body);
@@ -66,6 +67,70 @@ const scores = asyncHandler(async (req, res) => {
   res.json(await service.getGameScores(Number(req.params.id)));
 });
 
+async function deal(req, res, next) {
+  try {
+    const gameId = Number(req.params.id);
+    const actorId = req.user.id;
+
+    const result = await gameRulesService.dealCards(gameId, actorId, req.body);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+const playCard = asyncHandler(async (req, res) => {
+  const gameId = Number(req.params.id);
+  const playerId = req.user.id;
+
+  const result = await gameRulesService.playCard(gameId, playerId, req.body);
+
+  res.json(result);
+});
+
+const drawCard = asyncHandler(async (req, res) => {
+  const gameId = Number(req.params.id);
+  const playerId = req.user.id;
+
+  const result = await gameRulesService.drawCard(gameId, playerId);
+  res.json(result);
+});
+
+const sayUno = asyncHandler(async (req, res) => {
+  const gameId = Number(req.params.id);
+  const playerId = req.user.id;
+
+  const result = await gameRulesService.sayUno(gameId, playerId);
+  res.json(result);
+});
+
+const challengeUno = asyncHandler(async (req, res) => {
+  const gameId = Number(req.params.id);
+  const challengerId = req.user.id;
+  const { challengedPlayerId } = req.body;
+
+  const result = await gameRulesService.challengeUno(
+    gameId,
+    challengerId,
+    challengedPlayerId,
+  );
+
+  res.json(result);
+});
+
+const fullStatus = asyncHandler(async (req, res) => {
+  const result = await gameRulesService.getFullStatus(Number(req.params.id));
+  res.json(result);
+});
+
+const myHand = asyncHandler(async (req, res) => {
+  const result = await gameRulesService.getMyHand(
+    Number(req.params.id),
+    req.user.id,
+  );
+  res.json(result);
+});
+
 module.exports = {
   create,
   read,
@@ -81,4 +146,11 @@ module.exports = {
   currentPlayer,
   topCard,
   scores,
+  deal,
+  playCard,
+  drawCard,
+  sayUno,
+  challengeUno,
+  fullStatus,
+  myHand,
 };

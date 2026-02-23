@@ -3,6 +3,7 @@ const Game = require("./Game");
 const Card = require("./Card");
 const Score = require("./Score");
 const GamePlayer = require("./GamePlayer");
+const Move = require("./Move");
 
 Player.hasMany(Game, { foreignKey: "ownerId", as: "ownedGames" });
 Game.belongsTo(Player, { foreignKey: "ownerId", as: "owner" });
@@ -25,6 +26,12 @@ Score.belongsTo(Game, { foreignKey: "gameId", as: "game" });
 Player.hasMany(Game, { foreignKey: "currentPlayerId", as: "currentTurnGames" });
 Game.belongsTo(Player, { foreignKey: "currentPlayerId", as: "currentPlayer" });
 
+Game.hasMany(Move, { foreignKey: "gameId", as: "moves" });
+Move.belongsTo(Game, { foreignKey: "gameId", as: "game" });
+
+Player.hasMany(Move, { foreignKey: "playerId", as: "moves" });
+Move.belongsTo(Player, { foreignKey: "playerId", as: "player" });
+
 Player.belongsToMany(Game, {
   through: GamePlayer,
   foreignKey: "playerId",
@@ -37,4 +44,4 @@ Game.belongsToMany(Player, {
   as: "players",
 });
 
-module.exports = { Player, Game, Card, Score, GamePlayer };
+module.exports = { Player, Game, Card, Score, GamePlayer, Move };

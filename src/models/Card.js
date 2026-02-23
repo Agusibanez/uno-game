@@ -1,14 +1,30 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/db");
 
-const Card = sequelize.define("Card", {
-  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  color: { type: DataTypes.STRING(20), allowNull: false },
-  value: { type: DataTypes.STRING(20), allowNull: false },
-  gameId: { type: DataTypes.INTEGER, allowNull: false }
-}, {
-  tableName: "cards",
-  timestamps: true
-});
+const Player = sequelize.define(
+  "Player",
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    name: { type: DataTypes.STRING(50), allowNull: false },
+    age: { type: DataTypes.INTEGER, allowNull: false },
+    email: { type: DataTypes.STRING(120), allowNull: false, unique: true },
 
-module.exports = Card;
+    username: { type: DataTypes.STRING(50), allowNull: true, unique: true },
+    passwordHash: { type: DataTypes.STRING(255), allowNull: true },
+    tokenVersion: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+  },
+  {
+    tableName: "players",
+    timestamps: true,
+  },
+);
+
+module.exports = Player;
