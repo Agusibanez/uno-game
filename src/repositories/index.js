@@ -4,6 +4,7 @@ const gamePlayerRepo = require("./gameplayer.repository");
 const playerRepo = require("./player.repository");
 const scoreRepo = require("./score.repository");
 const moveRepo = require("./move.repository");
+const statRepo = require("./stat.repository");
 
 module.exports = {
   cardRepo,
@@ -12,4 +13,5 @@ module.exports = {
   playerRepo,
   scoreRepo,
   moveRepo,
+  statRepo,
 };
