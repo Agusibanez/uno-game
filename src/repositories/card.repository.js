@@ -2,8 +2,8 @@ const { Op } = require("sequelize");
 const { Card } = require("../models");
 const { find } = require("lodash");
 
-function bulkCreate(rows) {
-  return Card.bulkCreate(rows);
+function create(data) {
+  return Card.create(data);
 }
 
 function bulkCreate(rows) {

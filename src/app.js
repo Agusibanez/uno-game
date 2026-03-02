@@ -4,10 +4,10 @@ const cardRoutes = require("./routes/card.routes");
 const gameRoutes = require("./routes/game.routes");
 const playerRoutes = require("./routes/player.routes");
 const scoreRoutes = require("./routes/score.routes");
+const statRoutes = require("./routes/stat.routes");
 const errorMiddleware = require("./middlewares/error.middleware");
 const morgan = require("morgan");
-
-const { memoizeMiddleware } = require("./middlewares/memoize.middleware");
+const trackingMiddleware = require("./middlewares/tracking.middleware");
 
 const { memoizeMiddleware } = require("./middlewares/memoize.middleware");
 
@@ -26,11 +26,13 @@ const cache = memoizeMiddleware({
   },
 });
 
+app.use("/api", trackingMiddleware);
 app.use("/api", cache);
 app.use("/api", playerRoutes);
 app.use("/api", gameRoutes);
 app.use("/api", cardRoutes);
 app.use("/api", scoreRoutes);
+app.use("/api", statRoutes);
 
 app.use(errorMiddleware);
 

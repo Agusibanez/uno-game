@@ -180,7 +180,6 @@ const challengeUno = asyncHandler(async (req, res) => {
   const challengerId = requireAuthUserId(req, res);
   if (challengerId === null) return;
 
-  // Validar challengedPlayerId (si viene mal, evitás NaN en queries)
   const challenged = parseIntParam(req.body?.challengedPlayerId);
   if (challenged === null) {
     return res.status(400).json({ message: "Invalid challengedPlayerId" });
@@ -211,70 +210,6 @@ const myHand = asyncHandler(async (req, res) => {
   if (userId === null) return;
 
   const result = await gameRulesService.getMyHand(gameId, userId);
-  res.json(result);
-});
-
-async function deal(req, res, next) {
-  try {
-    const gameId = Number(req.params.id);
-    const actorId = req.user.id;
-
-    const result = await gameRulesService.dealCards(gameId, actorId, req.body);
-    res.status(200).json(result);
-  } catch (err) {
-    next(err);
-  }
-}
-
-const playCard = asyncHandler(async (req, res) => {
-  const gameId = Number(req.params.id);
-  const playerId = req.user.id;
-
-  const result = await gameRulesService.playCard(gameId, playerId, req.body);
-
-  res.json(result);
-});
-
-const drawCard = asyncHandler(async (req, res) => {
-  const gameId = Number(req.params.id);
-  const playerId = req.user.id;
-
-  const result = await gameRulesService.drawCard(gameId, playerId);
-  res.json(result);
-});
-
-const sayUno = asyncHandler(async (req, res) => {
-  const gameId = Number(req.params.id);
-  const playerId = req.user.id;
-
-  const result = await gameRulesService.sayUno(gameId, playerId);
-  res.json(result);
-});
-
-const challengeUno = asyncHandler(async (req, res) => {
-  const gameId = Number(req.params.id);
-  const challengerId = req.user.id;
-  const { challengedPlayerId } = req.body;
-
-  const result = await gameRulesService.challengeUno(
-    gameId,
-    challengerId,
-    challengedPlayerId,
-  );
-
-  res.json(result);
-});
-
-const fullStatus = asyncHandler(async (req, res) => {
-  const result = await gameRulesService.getFullStatus(Number(req.params.id));
-  res.json(result);
-});
-
-const myHand = asyncHandler(async (req, res) => {
-  const result = await gameRulesService.getMyHand(
-    Number(req.params.id),
-    req.user.id,
-  );
   res.json(result);
 });
 
