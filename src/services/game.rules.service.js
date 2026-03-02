@@ -49,7 +49,7 @@ async function dealCards(gameId, actorPlayerId, payload) {
 }
 
 async function playCard(gameId, playerId, body) {
-  const { cardId } = body;
+  const { cardId, chosenColor } = body;
 
   const game = await gameRepo.findById(gameId);
   if (!game) throw new NotFoundError("Game not found");
@@ -64,9 +64,22 @@ async function playCard(gameId, playerId, body) {
   }
 
   const { discardTopColor, discardTopValue } = game;
+  const hasDrawStack = (game.drawStack || 0) > 0;
+  const drawPenaltyCard = isDrawPenaltyCard(card);
 
-  if (!isPlayable(card, discardTopColor, discardTopValue)) {
+  if (hasDrawStack && !drawPenaltyCard) {
+    throw new ConflictError(
+      "You must play a +2 or wild+4 to stack, or draw penalty cards.",
+    );
+  }
+
+  if (!hasDrawStack && !isPlayable(card, discardTopColor, discardTopValue)) {
     throw new ConflictError("Invalid card. Must match color or value.");
+  }
+
+  const selectedColor = normalizeChosenColor(chosenColor);
+  if (card.color === "black" && !selectedColor) {
+    throw new ConflictError("Wild cards require chosenColor");
   }
 
   await cardRepo.moveToDiscard(card.id);
@@ -101,8 +114,14 @@ async function playCard(gameId, playerId, body) {
     game.direction = game.direction === -1 ? 1 : -1;
   }
 
-  game.discardTopColor = card.color;
+  game.discardTopColor = card.color === "black" ? selectedColor : card.color;
   game.discardTopValue = card.value;
+
+  if (card.value === "+2") {
+    game.drawStack = (game.drawStack || 0) + 2;
+  } else if (card.value === "wild+4") {
+    game.drawStack = (game.drawStack || 0) + 4;
+  }
 
   const steps = card.value === "skip" ? 2 : 1;
   await advanceTurn(game, steps);
@@ -112,6 +131,7 @@ async function playCard(gameId, playerId, body) {
   return {
     message: "Card played successfully.",
     direction: game.direction === -1 ? "counterclockwise" : "clockwise",
+    drawStack: game.drawStack || 0,
     nextPlayer: game.currentPlayerId,
   };
 }
@@ -126,6 +146,16 @@ function isPlayable(card, topColor, topValue) {
   if (!card) return false;
   if (card.color === "black") return true;
   return card.color === topColor || card.value === topValue;
+}
+
+function isDrawPenaltyCard(card) {
+  return card?.value === "+2" || card?.value === "wild+4";
+}
+
+function normalizeChosenColor(chosenColor) {
+  if (typeof chosenColor !== "string") return null;
+  const color = chosenColor.trim().toLowerCase();
+  return ["red", "blue", "green", "yellow"].includes(color) ? color : null;
 }
 
 async function dealRoundsRecursive(gameId, players, cardsPerPlayer, round) {
@@ -176,6 +206,42 @@ async function drawCard(gameId, playerId) {
   assertGameStarted(game);
   assertPlayerTurn(game, playerId);
 
+  if ((game.drawStack || 0) > 0) {
+    const penaltyCount = game.drawStack;
+    const drawnCards = await drawFixedCountRecursive(
+      gameId,
+      playerId,
+      penaltyCount,
+      [],
+    );
+
+    game.drawStack = 0;
+
+    await moveRepo.create({
+      gameId,
+      playerId,
+      action: "draw",
+      detail: {
+        cards: drawnCards,
+        playable: false,
+        penalty: true,
+      },
+    });
+
+    await gamePlayerRepo.setUno(gameId, playerId, false);
+    await advanceTurn(game);
+    await gameRepo.save(game);
+
+    return {
+      message: `Player drew ${drawnCards.length} penalty card(s). Turn ended.`,
+      cardsDrawn: drawnCards,
+      drawnCard: drawnCards.length > 0 ? drawnCards[drawnCards.length - 1] : null,
+      playable: false,
+      drawStack: game.drawStack,
+      nextPlayer: game.currentPlayerId,
+    };
+  }
+
   const topColor = game.discardTopColor;
   const topValue = game.discardTopValue;
 
@@ -224,6 +290,17 @@ async function drawCard(gameId, playerId) {
     playable: drawResult.playable,
     nextPlayer: game.currentPlayerId,
   };
+}
+
+async function drawFixedCountRecursive(gameId, playerId, remaining, acc) {
+  if (remaining <= 0) return acc;
+
+  const topDeck = await cardRepo.findDeckTop(gameId);
+  if (!topDeck) throw new ConflictError("Deck is empty");
+
+  await cardRepo.moveToHand(topDeck.id, playerId);
+  const nextAcc = [...acc, `${topDeck.color} ${topDeck.value}`];
+  return drawFixedCountRecursive(gameId, playerId, remaining - 1, nextAcc);
 }
 
 async function drawUntilPlayableRecursive(
@@ -333,7 +410,7 @@ async function calculateScores(gameId, winnerId) {
 
     for (const card of hand) {
       if (card.value === "skip" || card.value === "reverse") score += 20;
-      else if (card.value === "draw2") score += 20;
+      else if (card.value === "draw2" || card.value === "+2") score += 20;
       else if (card.value === "wild" || card.value === "wild+4") score += 50;
       else score += Number(card.value) || 0;
     }
@@ -367,7 +444,12 @@ async function getMyHand(gameId, playerId) {
 
   return {
     player: playerId,
-    hand: hand.map((c) => `${c.color} ${c.value}`),
+    hand: hand.map((c) => ({
+      id: c.id,
+      color: c.color,
+      value: c.value,
+      label: `${c.color} ${c.value}`,
+    })),
   };
 }
 

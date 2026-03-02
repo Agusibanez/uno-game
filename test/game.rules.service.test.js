@@ -135,6 +135,91 @@ describe("game.rules.service", () => {
     expect(result.nextPlayer).toBe(3);
   });
 
+  test("playCard wild+4 requires chosenColor", async () => {
+    const game = {
+      id: 13,
+      status: "started",
+      currentPlayerId: 1,
+      direction: 1,
+      discardTopColor: "blue",
+      discardTopValue: "5",
+      drawStack: 0,
+    };
+    gameRepo.findById.mockResolvedValue(game);
+    cardRepo.findCardInHand.mockResolvedValue({
+      id: 201,
+      color: "black",
+      value: "wild+4",
+    });
+
+    await expect(service.playCard(13, 1, { cardId: 201 })).rejects.toThrow(
+      "Wild cards require chosenColor",
+    );
+  });
+
+  test("playCard wild+4 sets chosen color and increases drawStack", async () => {
+    const game = {
+      id: 14,
+      status: "started",
+      currentPlayerId: 1,
+      direction: 1,
+      discardTopColor: "blue",
+      discardTopValue: "5",
+      drawStack: 0,
+    };
+    gameRepo.findById.mockResolvedValue(game);
+    gamePlayerRepo.findAllByGame.mockResolvedValue([
+      { playerId: 1 },
+      { playerId: 2 },
+      { playerId: 3 },
+    ]);
+    cardRepo.findCardInHand.mockResolvedValue({
+      id: 202,
+      color: "black",
+      value: "wild+4",
+    });
+    cardRepo.countHand.mockResolvedValue(3);
+
+    const result = await service.playCard(14, 1, {
+      cardId: 202,
+      chosenColor: "yellow",
+    });
+
+    expect(game.discardTopColor).toBe("yellow");
+    expect(game.drawStack).toBe(4);
+    expect(result.drawStack).toBe(4);
+    expect(result.nextPlayer).toBe(2);
+  });
+
+  test("playCard allows stacking +2 on existing drawStack", async () => {
+    const game = {
+      id: 16,
+      status: "started",
+      currentPlayerId: 2,
+      direction: 1,
+      discardTopColor: "red",
+      discardTopValue: "wild+4",
+      drawStack: 4,
+    };
+    gameRepo.findById.mockResolvedValue(game);
+    gamePlayerRepo.findAllByGame.mockResolvedValue([
+      { playerId: 1 },
+      { playerId: 2 },
+      { playerId: 3 },
+    ]);
+    cardRepo.findCardInHand.mockResolvedValue({
+      id: 203,
+      color: "blue",
+      value: "+2",
+    });
+    cardRepo.countHand.mockResolvedValue(3);
+
+    const result = await service.playCard(16, 2, { cardId: 203 });
+    expect(game.drawStack).toBe(6);
+    expect(result.drawStack).toBe(6);
+    expect(result.nextPlayer).toBe(3);
+  });
+
   test("drawCard rejects when player has playable card", async () => {
     const game = {
       id: 11,
@@ -187,6 +272,42 @@ describe("game.rules.service", () => {
         detail: { cards: ["red 1", "green 4"], playable: true },
       }),
     );
+  });
+
+  test("drawCard with drawStack draws exact penalty and resets stack", async () => {
+    const game = {
+      id: 17,
+      status: "started",
+      currentPlayerId: 3,
+      direction: 1,
+      discardTopColor: "yellow",
+      discardTopValue: "wild+4",
+      drawStack: 6,
+    };
+
+    gameRepo.findById.mockResolvedValue(game);
+    gamePlayerRepo.findAllByGame.mockResolvedValue([
+      { playerId: 1 },
+      { playerId: 2 },
+      { playerId: 3 },
+      { playerId: 4 },
+    ]);
+
+    cardRepo.findDeckTop
+      .mockResolvedValueOnce({ id: 1, color: "red", value: "1" })
+      .mockResolvedValueOnce({ id: 2, color: "red", value: "2" })
+      .mockResolvedValueOnce({ id: 3, color: "red", value: "3" })
+      .mockResolvedValueOnce({ id: 4, color: "red", value: "4" })
+      .mockResolvedValueOnce({ id: 5, color: "red", value: "5" })
+      .mockResolvedValueOnce({ id: 6, color: "red", value: "6" });
+
+    const result = await service.drawCard(17, 3);
+    expect(cardRepo.moveToHand).toHaveBeenCalledTimes(6);
+    expect(result.cardsDrawn).toHaveLength(6);
+    expect(result.playable).toBe(false);
+    expect(result.drawStack).toBe(0);
+    expect(game.drawStack).toBe(0);
+    expect(result.nextPlayer).toBe(4);
   });
 
   test("services use validators on deal flow", async () => {
@@ -302,14 +423,17 @@ describe("game.rules.service", () => {
 
   test("getMyHand returns only current player hand view", async () => {
     cardRepo.findHand.mockResolvedValue([
-      { color: "black", value: "wild" },
-      { color: "yellow", value: "3" },
+      { id: 11, color: "black", value: "wild" },
+      { id: 12, color: "yellow", value: "3" },
     ]);
 
     const res = await service.getMyHand(30, 7);
     expect(res).toEqual({
       player: 7,
-      hand: ["black wild", "yellow 3"],
+      hand: [
+        { id: 11, color: "black", value: "wild", label: "black wild" },
+        { id: 12, color: "yellow", value: "3", label: "yellow 3" },
+      ],
     });
   });
 });
