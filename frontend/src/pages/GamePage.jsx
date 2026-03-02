@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAppStore } from "../store/useAppStore";
+import GameHeader from "../components/game/GameHeader";
+import PlayersPanel from "../components/game/PlayersPanel";
+import HandPanel from "../components/game/HandPanel";
+import { isWildCard } from "../utils/card-ui";
+import "../components/cards/uno-cards.css";
 
 export default function GamePage() {
   const { id } = useParams();
@@ -12,11 +17,12 @@ export default function GamePage() {
   const [state, setState] = useState(null);
   const [ownerId, setOwnerId] = useState(null);
   const [myId, setMyId] = useState(null);
+  const [drawStack, setDrawStack] = useState(0);
   const [players, setPlayers] = useState([]);
   const [currentPlayer, setCurrentPlayer] = useState("-");
   const [topCard, setTopCard] = useState("-");
   const [hand, setHand] = useState([]);
-  const [cardIdInput, setCardIdInput] = useState("");
+  const [selectedCardId, setSelectedCardId] = useState(null);
   const [chosenColor, setChosenColor] = useState("red");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -33,6 +39,7 @@ export default function GamePage() {
         api.get("/auth/me"),
       ]);
       setOwnerId(g.data.ownerId ?? null);
+      setDrawStack(Number(g.data.drawStack || 0));
       setState(st.data.state);
       setPlayers(pl.data.players || []);
       setCurrentPlayer(cp.data.current_player || "-");
@@ -51,6 +58,12 @@ export default function GamePage() {
   }, [id]);
 
   useEffect(() => {
+    if (!selectedCardId) return;
+    const stillInHand = hand.some((card) => String(card.id) === String(selectedCardId));
+    if (!stillInHand) setSelectedCardId(null);
+  }, [hand, selectedCardId]);
+
+  useEffect(() => {
     const active = socket || connectSocket();
     active.emit("join-game", id);
     active.on("update", loadStatus);
@@ -62,15 +75,16 @@ export default function GamePage() {
   async function playSelected() {
     setError("");
     setMessage("");
-    if (!cardIdInput) return;
+    if (!selectedCardId) return;
     try {
-      const selected = hand.find((c) => String(c.id) === String(cardIdInput));
-      const payload = { cardId: Number(cardIdInput) };
-      if (selected && (selected.value === "wild" || selected.value === "wild+4")) {
+      const selected = hand.find((c) => String(c.id) === String(selectedCardId));
+      const payload = { cardId: Number(selectedCardId) };
+      if (selected && isWildCard(selected)) {
         payload.chosenColor = chosenColor;
       }
       const res = await api.put(`/games/${id}/play`, payload);
       setMessage(res.data.message || "Carta jugada");
+      setSelectedCardId(null);
       await loadStatus();
     } catch (err) {
       setError(err?.response?.data?.message || "No se pudo jugar carta");
@@ -152,100 +166,43 @@ export default function GamePage() {
   const isOwner = ownerId !== null && myId !== null && ownerId === myId;
   const isJoined = players.includes(username);
   const isWaiting = state === "waiting";
+  const selectedCard = hand.find((card) => String(card.id) === String(selectedCardId)) || null;
 
   return (
     <main className="page">
-      <header className="topbar">
-        <div>
-          <h1>Partida #{id}</h1>
-          <p className="muted">
-            Estado: <b>{state || "-"}</b> | Turno: <b>{currentPlayer}</b> | Top: <b>{topCard}</b>
-          </p>
-        </div>
-        <button className="btn" onClick={() => navigate("/lobby")} type="button">
-          Volver al lobby
-        </button>
-      </header>
+      <GameHeader
+        gameId={id}
+        state={state}
+        currentPlayer={currentPlayer}
+        topCard={topCard}
+        drawStack={drawStack}
+        onBack={() => navigate("/lobby")}
+      />
 
       <section className="grid two">
-        <article className="card">
-          <h2>Sala</h2>
-          <div className="row wrap">
-            {!isJoined && isWaiting ? (
-              <button className="btn" onClick={joinGame} type="button">
-                Unirme
-              </button>
-            ) : null}
-            {isJoined && isWaiting ? (
-              <button className="btn" onClick={readyGame} type="button">
-                Ready
-              </button>
-            ) : null}
-            {isOwner && isWaiting ? (
-              <button className="btn primary" onClick={startGame} type="button">
-                Iniciar partida
-              </button>
-            ) : null}
-            {isOwner && state === "started" ? (
-              <button className="btn" onClick={dealCards} type="button">
-                Repartir 7
-              </button>
-            ) : null}
-          </div>
+        <PlayersPanel
+          players={players}
+          isJoined={isJoined}
+          isWaiting={isWaiting}
+          isOwner={isOwner}
+          state={state}
+          onJoin={joinGame}
+          onReady={readyGame}
+          onStart={startGame}
+          onDeal={dealCards}
+        />
 
-          <h3>Jugadores</h3>
-          <ul className="list">
-            {players.map((p) => (
-              <li key={p}>{p}</li>
-            ))}
-          </ul>
-        </article>
-
-        <article className="card">
-          <h2>Mi mano</h2>
-          <ul className="list">
-            {hand.map((c) => (
-              <li key={c.id}>
-                <button
-                  className="btn"
-                  type="button"
-                  onClick={() => setCardIdInput(String(c.id))}
-                >
-                  {c.label} (id: {c.id})
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          <input
-            className="select"
-            placeholder="cardId para jugar"
-            value={cardIdInput}
-            onChange={(e) => setCardIdInput(e.target.value)}
-          />
-          <select
-            className="select"
-            value={chosenColor}
-            onChange={(e) => setChosenColor(e.target.value)}
-          >
-            <option value="red">Color wild: rojo</option>
-            <option value="blue">Color wild: azul</option>
-            <option value="green">Color wild: verde</option>
-            <option value="yellow">Color wild: amarillo</option>
-          </select>
-
-          <div className="row wrap">
-            <button className="btn primary" onClick={playSelected} type="button">
-              Jugar carta
-            </button>
-            <button className="btn" onClick={drawCard} type="button">
-              Robar
-            </button>
-            <button className="btn" onClick={sayUno} type="button">
-              Decir UNO
-            </button>
-          </div>
-        </article>
+        <HandPanel
+          hand={hand}
+          selectedCard={selectedCard}
+          selectedCardId={selectedCardId}
+          onSelectCard={(card) => setSelectedCardId(card.id)}
+          chosenColor={chosenColor}
+          onChosenColorChange={setChosenColor}
+          onPlay={playSelected}
+          onDraw={drawCard}
+          onSayUno={sayUno}
+        />
       </section>
 
       {message ? <p className="ok">{message}</p> : null}

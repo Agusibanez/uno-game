@@ -32,6 +32,14 @@ async function dealCards(gameId, actorPlayerId, payload) {
     throw new ConflictError("Not enough players to deal");
   }
 
+  const handCounts = await Promise.all(
+    players.map((p) => cardRepo.countHand(gameId, p.playerId)),
+  );
+  const alreadyDealt = handCounts.some((count) => count > 0);
+  if (alreadyDealt) {
+    throw new ConflictError("Cards have already been dealt in this game");
+  }
+
   const cardsPerPlayer = payload.cardsPerPlayer;
 
   await dealRoundsRecursive(gameId, players, cardsPerPlayer, 0);
@@ -66,6 +74,8 @@ async function playCard(gameId, playerId, body) {
   const { discardTopColor, discardTopValue } = game;
   const hasDrawStack = (game.drawStack || 0) > 0;
   const drawPenaltyCard = isDrawPenaltyCard(card);
+  const topIsPenaltyCard =
+    game.discardTopValue === "+2" || game.discardTopValue === "wild+4";
 
   if (hasDrawStack && !drawPenaltyCard) {
     throw new ConflictError(
@@ -118,9 +128,9 @@ async function playCard(gameId, playerId, body) {
   game.discardTopValue = card.value;
 
   if (card.value === "+2") {
-    game.drawStack = (game.drawStack || 0) + 2;
+    game.drawStack = hasDrawStack && topIsPenaltyCard ? game.drawStack + 2 : 2;
   } else if (card.value === "wild+4") {
-    game.drawStack = (game.drawStack || 0) + 4;
+    game.drawStack = hasDrawStack && topIsPenaltyCard ? game.drawStack + 4 : 4;
   }
 
   const steps = card.value === "skip" ? 2 : 1;
@@ -256,13 +266,7 @@ async function drawCard(gameId, playerId) {
     throw new ConflictError("You have a playable card. You must play.");
   }
 
-  const drawResult = await drawUntilPlayableRecursive(
-    gameId,
-    playerId,
-    topColor,
-    topValue,
-    [],
-  );
+  const drawResult = await drawSingleCard(gameId, playerId, topColor, topValue);
 
   await moveRepo.create({
     gameId,
@@ -303,34 +307,24 @@ async function drawFixedCountRecursive(gameId, playerId, remaining, acc) {
   return drawFixedCountRecursive(gameId, playerId, remaining - 1, nextAcc);
 }
 
-async function drawUntilPlayableRecursive(
+async function drawSingleCard(
   gameId,
   playerId,
   topColor,
   topValue,
-  acc,
 ) {
   const topDeck = await cardRepo.findDeckTop(gameId);
 
   if (!topDeck) {
-    return { drawnCards: acc, playable: false };
+    throw new ConflictError("Deck is empty");
   }
 
   await cardRepo.moveToHand(topDeck.id, playerId);
   const label = `${topDeck.color} ${topDeck.value}`;
-  const nextAcc = [...acc, label];
-
-  if (isPlayable(topDeck, topColor, topValue)) {
-    return { drawnCards: nextAcc, playable: true };
-  }
-
-  return drawUntilPlayableRecursive(
-    gameId,
-    playerId,
-    topColor,
-    topValue,
-    nextAcc,
-  );
+  return {
+    drawnCards: [label],
+    playable: isPlayable(topDeck, topColor, topValue),
+  };
 }
 
 async function sayUno(gameId, playerId) {

@@ -124,6 +124,8 @@ async function startGame(gameId, playerId) {
 
   const firstCard = await cardRepo.findFirstByGame(gameId);
   if (firstCard) {
+    await cardRepo.moveToDiscard(firstCard.id);
+
     if (firstCard.color === "black") {
       const colors = ["red", "blue", "green", "yellow"];
       game.discardTopColor = colors[Math.floor(Math.random() * colors.length)];

@@ -8,7 +8,11 @@ const Card = sequelize.define(
     gameId: { type: DataTypes.INTEGER, allowNull: false },
     color: { type: DataTypes.STRING(20), allowNull: false },
     value: { type: DataTypes.STRING(20), allowNull: false },
-    location: { type: DataTypes.STRING(20), allowNull: false, defaultValue: "deck" },
+    location: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "deck",
+    },
     ownerPlayerId: { type: DataTypes.INTEGER, allowNull: true },
     position: { type: DataTypes.INTEGER, allowNull: true },
   },
@@ -18,18 +22,4 @@ const Card = sequelize.define(
   },
 );
 
-    username: { type: DataTypes.STRING(50), allowNull: true, unique: true },
-    passwordHash: { type: DataTypes.STRING(255), allowNull: true },
-    tokenVersion: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    },
-  },
-  {
-    tableName: "players",
-    timestamps: true,
-  },
-);
-
-module.exports = Player;
+module.exports = Card;

@@ -92,6 +92,11 @@ input,
   cursor: pointer;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn.primary {
   background: var(--accent);
   color: #fff;

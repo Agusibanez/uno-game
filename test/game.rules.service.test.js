@@ -238,7 +238,7 @@ describe("game.rules.service", () => {
     );
   });
 
-  test("drawCard draws until finds a playable card", async () => {
+  test("drawCard (normal) draws only one card", async () => {
     const game = {
       id: 12,
       status: "started",
@@ -256,20 +256,18 @@ describe("game.rules.service", () => {
       { playerId: 7 },
     ]);
 
-    cardRepo.findDeckTop
-      .mockResolvedValueOnce({ id: 1, color: "red", value: "1" })
-      .mockResolvedValueOnce({ id: 2, color: "green", value: "4" });
+    cardRepo.findDeckTop.mockResolvedValueOnce({ id: 1, color: "red", value: "1" });
 
     const result = await service.drawCard(12, 5);
 
-    expect(cardRepo.moveToHand).toHaveBeenCalledTimes(2);
-    expect(result.cardsDrawn).toEqual(["red 1", "green 4"]);
-    expect(result.playable).toBe(true);
+    expect(cardRepo.moveToHand).toHaveBeenCalledTimes(1);
+    expect(result.cardsDrawn).toEqual(["red 1"]);
+    expect(result.playable).toBe(false);
     expect(result.nextPlayer).toBe(6);
     expect(moveRepo.create).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "draw",
-        detail: { cards: ["red 1", "green 4"], playable: true },
+        detail: { cards: ["red 1"], playable: false },
       }),
     );
   });
@@ -320,12 +318,34 @@ describe("game.rules.service", () => {
       { playerId: 1 },
       { playerId: 2 },
     ]);
+    cardRepo.countHand
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
     cardRepo.findDeckTop.mockResolvedValue({ id: 1, color: "red", value: "1" });
     cardRepo.findHand.mockResolvedValue([]);
 
     await service.dealCards(15, 1, { cardsPerPlayer: 1 });
     expect(validators.validateDealPayload).toHaveBeenCalled();
     expect(validators.assertGameStarted).toHaveBeenCalled();
+  });
+
+  test("dealCards fails if cards were already dealt", async () => {
+    gameRepo.findById.mockResolvedValue({
+      id: 18,
+      ownerId: 1,
+      status: "started",
+    });
+    gamePlayerRepo.findAllByGame.mockResolvedValue([
+      { playerId: 1 },
+      { playerId: 2 },
+    ]);
+    cardRepo.countHand
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0);
+
+    await expect(
+      service.dealCards(18, 1, { cardsPerPlayer: 7 }),
+    ).rejects.toThrow("Cards have already been dealt in this game");
   });
 
   test("playCard ends game when player has no cards left", async () => {

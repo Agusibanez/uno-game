@@ -1,0 +1,207 @@
+.game-header {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.game-header-info h1 {
+  margin: 0;
+}
+
+.game-topcard {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.top-placeholder {
+  width: 120px;
+  height: 180px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: #11161f;
+}
+
+.uno-hand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.uno-card {
+  width: 100%;
+  min-width: 110px;
+  height: 170px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: grid;
+  align-items: stretch;
+  background: #161616;
+  padding: 6px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  animation: card-enter 220ms ease both;
+}
+
+.uno-card:hover {
+  transform: translateY(-2px);
+}
+
+.uno-card.selected {
+  border-color: #fef3a6;
+  box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.35);
+  transform: translateY(-3px) scale(1.02);
+  animation: card-select 170ms ease;
+}
+
+.uno-card.disabled {
+  cursor: default;
+  opacity: 0.95;
+}
+
+.uno-card-inner {
+  position: relative;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.uno-corner {
+  position: absolute;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+.uno-corner.top {
+  top: 8px;
+  left: 10px;
+}
+
+.uno-corner.bottom {
+  bottom: 8px;
+  right: 10px;
+  transform: rotate(180deg);
+}
+
+.uno-center {
+  font-size: 28px;
+  font-weight: 800;
+  text-shadow: 0 2px 7px rgba(0, 0, 0, 0.35);
+}
+
+.uno-id {
+  font-size: 11px;
+  color: #d6d6d6;
+  text-align: center;
+  margin-top: 4px;
+  display: block;
+}
+
+.uno-hand-grid .uno-card:nth-child(1) {
+  animation-delay: 0ms;
+}
+.uno-hand-grid .uno-card:nth-child(2) {
+  animation-delay: 20ms;
+}
+.uno-hand-grid .uno-card:nth-child(3) {
+  animation-delay: 40ms;
+}
+.uno-hand-grid .uno-card:nth-child(4) {
+  animation-delay: 60ms;
+}
+.uno-hand-grid .uno-card:nth-child(5) {
+  animation-delay: 80ms;
+}
+.uno-hand-grid .uno-card:nth-child(6) {
+  animation-delay: 100ms;
+}
+.uno-hand-grid .uno-card:nth-child(7) {
+  animation-delay: 120ms;
+}
+.uno-hand-grid .uno-card:nth-child(8) {
+  animation-delay: 140ms;
+}
+.uno-hand-grid .uno-card:nth-child(9) {
+  animation-delay: 160ms;
+}
+.uno-hand-grid .uno-card:nth-child(10) {
+  animation-delay: 180ms;
+}
+
+.uno-red {
+  background: linear-gradient(160deg, #fb4d4d, #be123c);
+}
+
+.uno-blue {
+  background: linear-gradient(160deg, #4aa7ff, #1d4ed8);
+}
+
+.uno-green {
+  background: linear-gradient(160deg, #40d67c, #15803d);
+}
+
+.uno-yellow {
+  background: linear-gradient(160deg, #ffe167, #ca8a04);
+  color: #202020;
+}
+
+.uno-yellow .uno-card-inner {
+  border-color: rgba(32, 32, 32, 0.6);
+}
+
+.uno-black {
+  background: linear-gradient(
+    145deg,
+    #202020 0%,
+    #202020 40%,
+    #b91c1c 40%,
+    #b91c1c 55%,
+    #1d4ed8 55%,
+    #1d4ed8 70%,
+    #ca8a04 70%,
+    #ca8a04 85%,
+    #15803d 85%
+  );
+}
+
+@media (max-width: 940px) {
+  .game-header {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes card-select {
+  0% {
+    transform: translateY(-1px) scale(1);
+  }
+  60% {
+    transform: translateY(-5px) scale(1.03);
+  }
+  100% {
+    transform: translateY(-3px) scale(1.02);
+  }
+}
