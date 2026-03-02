@@ -6,12 +6,13 @@ const { sequelize } = require("./config/db");
 require("./models");
 
 const PORT = Number(process.env.PORT || 3000);
+const allowedOrigin = process.env.CORS_ORIGIN || "http://localhost:5173";
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: allowedOrigin,
   },
 });
 
