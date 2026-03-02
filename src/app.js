@@ -5,11 +5,15 @@ const gameRoutes = require("./routes/game.routes");
 const playerRoutes = require("./routes/player.routes");
 const scoreRoutes = require("./routes/score.routes");
 const errorMiddleware = require("./middlewares/error.middleware");
+const morgan = require("morgan");
+
+const { memoizeMiddleware } = require("./middlewares/memoize.middleware");
 
 const { memoizeMiddleware } = require("./middlewares/memoize.middleware");
 
 const app = express();
 app.use(express.json());
+app.use(morgan("dev"));
 
 const cache = memoizeMiddleware({
   max: 50,
