@@ -32,8 +32,9 @@ async function updatePlayer(id, payload) {
 }
 
 async function deletePlayer(id) {
-  const player = await getPlayer(id);
-  await playerRepo.destroy(player);
+  const p = await playerRepo.findByPk(id);
+  if (!p) throw new NotFoundError("Player not found");
+  await playerRepo.destroy(p);
   return { deleted: true };
 }
 

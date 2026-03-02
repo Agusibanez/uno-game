@@ -3,7 +3,13 @@ const {
   NotFoundError,
   ForbiddenError,
 } = require("../utils/domain-errors");
-const { gameRepo, gamePlayerRepo, cardRepo } = require("../repositories");
+const {
+  gameRepo,
+  gamePlayerRepo,
+  cardRepo,
+  moveRepo,
+  scoreRepo,
+} = require("../repositories");
 const {
   validateDealPayload,
   assertGameStarted,
@@ -91,17 +97,35 @@ async function playCard(gameId, playerId, body) {
     await gamePlayerRepo.setUno(gameId, playerId, false);
   }
 
+  if (card.value === "reverse") {
+    game.direction = game.direction === -1 ? 1 : -1;
+  }
+
   game.discardTopColor = card.color;
   game.discardTopValue = card.value;
 
-  await advanceTurn(game);
+  const steps = card.value === "skip" ? 2 : 1;
+  await advanceTurn(game, steps);
 
   await gameRepo.save(game);
 
   return {
     message: "Card played successfully.",
+    direction: game.direction === -1 ? "counterclockwise" : "clockwise",
     nextPlayer: game.currentPlayerId,
   };
+}
+
+function assertPlayerTurn(game, playerId) {
+  if (game.currentPlayerId !== playerId) {
+    throw new ForbiddenError("It is not your turn");
+  }
+}
+
+function isPlayable(card, topColor, topValue) {
+  if (!card) return false;
+  if (card.color === "black") return true;
+  return card.color === topColor || card.value === topValue;
 }
 
 async function dealRoundsRecursive(gameId, players, cardsPerPlayer, round) {
@@ -123,7 +147,7 @@ async function dealOneEachRecursive(gameId, players, idx) {
   return dealOneEachRecursive(gameId, players, idx + 1);
 }
 
-async function advanceTurn(game) {
+async function advanceTurn(game, steps = 1) {
   const players = await gamePlayerRepo.findAllByGame(game.id);
 
   const currentIndex = players.findIndex(
@@ -134,9 +158,13 @@ async function advanceTurn(game) {
     throw new ConflictError("Current player invalid");
   }
 
-  const direction = 1;
+  const direction = game.direction === -1 ? -1 : 1;
+  const normalizedSteps =
+    Number.isInteger(steps) && steps > 0 ? steps : 1;
+
   const nextIndex =
-    (currentIndex + direction + players.length) % players.length;
+    (currentIndex + direction * normalizedSteps + players.length) %
+    players.length;
 
   game.currentPlayerId = players[nextIndex].playerId;
 }
@@ -162,16 +190,22 @@ async function drawCard(gameId, playerId) {
     throw new ConflictError("You have a playable card. You must play.");
   }
 
-  const topDeck = await cardRepo.findDeckTop(gameId);
-  if (!topDeck) throw new ConflictError("Deck is empty");
-
-  await cardRepo.moveToHand(topDeck.id, playerId);
+  const drawResult = await drawUntilPlayableRecursive(
+    gameId,
+    playerId,
+    topColor,
+    topValue,
+    [],
+  );
 
   await moveRepo.create({
     gameId,
     playerId,
     action: "draw",
-    detail: { card: `${topDeck.color} ${topDeck.value}` },
+    detail: {
+      cards: drawResult.drawnCards,
+      playable: drawResult.playable,
+    },
   });
 
   await gamePlayerRepo.setUno(gameId, playerId, false);
@@ -182,9 +216,44 @@ async function drawCard(gameId, playerId) {
 
   return {
     message: `Player drew a card from the deck. Turn ended.`,
-    cardDrawn: `${topDeck.color} ${topDeck.value}`,
+    cardsDrawn: drawResult.drawnCards,
+    drawnCard:
+      drawResult.drawnCards.length > 0
+        ? drawResult.drawnCards[drawResult.drawnCards.length - 1]
+        : null,
+    playable: drawResult.playable,
     nextPlayer: game.currentPlayerId,
   };
+}
+
+async function drawUntilPlayableRecursive(
+  gameId,
+  playerId,
+  topColor,
+  topValue,
+  acc,
+) {
+  const topDeck = await cardRepo.findDeckTop(gameId);
+
+  if (!topDeck) {
+    return { drawnCards: acc, playable: false };
+  }
+
+  await cardRepo.moveToHand(topDeck.id, playerId);
+  const label = `${topDeck.color} ${topDeck.value}`;
+  const nextAcc = [...acc, label];
+
+  if (isPlayable(topDeck, topColor, topValue)) {
+    return { drawnCards: nextAcc, playable: true };
+  }
+
+  return drawUntilPlayableRecursive(
+    gameId,
+    playerId,
+    topColor,
+    topValue,
+    nextAcc,
+  );
 }
 
 async function sayUno(gameId, playerId) {

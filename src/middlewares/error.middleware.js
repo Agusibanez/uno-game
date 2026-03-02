@@ -6,6 +6,7 @@ const {
   NotFoundError,
   ConflictError,
 } = require("../utils/domain-errors");
+const logger = require("../utils/logger");
 
 function errorMiddleware(err, req, res, next) {
   if (err instanceof DomainError) {
@@ -35,7 +36,13 @@ function errorMiddleware(err, req, res, next) {
     return res.status(400).json({ message: err.message || "Bad request" });
   }
 
-  console.error(err);
+  logger.error({
+    message: err.message,
+    stack: err.stack,
+    path: req.originalUrl,
+    method: req.method,
+  });
+
   return res.status(500).json({ message: "Internal server error" });
 }
 

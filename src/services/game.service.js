@@ -10,26 +10,34 @@ const {
   scoreRepo,
 } = require("../repositories");
 
-const { buildBasicDeck } = require("../domain/deck/basic-dec.builder");
+const {
+  buildShuffledDeckWithPositions,
+} = require("../domain/deck/basic-dec.builder");
 
 async function createGame(ownerId, payload) {
+  const realOwnerId = ownerId ?? payload.ownerId ?? payload.playerId;
+
+  if (!realOwnerId) {
+    throw new ConflictError("ownerId/playerId is required to create a game");
+  }
+
   const created = await gameRepo.create({
     title: payload.title,
     maxPlayers: payload.maxPlayers,
     status: payload.status || "waiting",
-    ownerId,
+    ownerId: realOwnerId,
   });
 
-  await cardRepo.bulkCreate(buildBasicDeck(created.id));
+  await cardRepo.bulkCreate(buildShuffledDeckWithPositions(created.id));
 
   await gamePlayerRepo.create({
     gameId: created.id,
-    playerId: ownerId,
+    playerId: realOwnerId,
   });
 
   await scoreRepo.create({
     gameId: created.id,
-    playerId: ownerId,
+    playerId: realOwnerId,
     score: 0,
   });
 

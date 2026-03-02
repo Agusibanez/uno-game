@@ -6,8 +6,16 @@ function bulkCreate(rows) {
   return Card.bulkCreate(rows);
 }
 
+function bulkCreate(rows) {
+  return Card.bulkCreate(rows);
+}
+
 function findByPk(id) {
   return Card.findByPk(id);
+}
+
+function destroy(instance) {
+  return instance.destroy();
 }
 
 function destroyByGame(gameId) {
@@ -42,7 +50,10 @@ function countHand(gameId, playerId) {
 }
 
 function findFirstByGame(gameId) {
-  return findDeckTop(gameId);
+  return Card.findOne({
+    where: { gameId, location: "deck" },
+    order: [["position", "ASC"]],
+  });
 }
 
 async function moveToHand(cardId, playerId) {
@@ -85,8 +96,10 @@ function findPlayableInHand(gameId, playerId, topColor, topValue) {
 }
 
 module.exports = {
+  create,
   bulkCreate,
   findByPk,
+  destroy,
   destroyByGame,
   findDeckTop,
   findDiscardTop,

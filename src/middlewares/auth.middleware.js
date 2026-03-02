@@ -37,31 +37,37 @@ function findUserAsync(id) {
 }
 
 function authMiddleware(req, res, next) {
-  const header = req.headers.authorization;
+  try {
+    const header = req.headers.authorization;
 
-  const tokenResult = parseBearer(header);
-  if (tokenResult.isErr()) return next(tokenResult.error);
+    const tokenResult = parseBearer(header);
+    if (tokenResult.isErr()) return next(tokenResult.error);
 
-  return verifyJwtAsync(tokenResult.value)
-    .chain((payload) => {
-      if (!payload || !payload.id) {
-        return ResultAsync.err(new UnauthorizedError("Invalid token"));
-      }
-      return findUserAsync(payload.id).map((user) => ({ payload, user }));
-    })
-    .chain(({ payload, user }) => {
-      const dbTokenVersion = user.tokenVersion || 0;
-      const tokenTokenVersion = payload.tokenVersion || 0;
+    return verifyJwtAsync(tokenResult.value)
+      .chain((payload) => {
+        const id = Number(payload?.id);
+        if (!Number.isInteger(id)) {
+          return ResultAsync.err(new UnauthorizedError("Invalid token"));
+        }
+        return findUserAsync(id).map((user) => ({ payload, user }));
+      })
+      .chain(({ payload, user }) => {
+        const dbTokenVersion = user.tokenVersion || 0;
+        const tokenTokenVersion = payload.tokenVersion || 0;
 
-      if (dbTokenVersion !== tokenTokenVersion) {
-        return ResultAsync.err(new UnauthorizedError("Invalid token"));
-      }
+        if (dbTokenVersion !== tokenTokenVersion) {
+          return ResultAsync.err(new UnauthorizedError("Invalid token"));
+        }
 
-      req.user = { id: user.id, username: user.username };
-      return ResultAsync.ok(true);
-    })
-    .run()
-    .then((r) => (r.isErr() ? next(r.error) : next()));
+        req.user = { id: user.id, username: user.username };
+        return ResultAsync.ok(true);
+      })
+      .run()
+      .then((r) => (r.isErr() ? next(r.error) : next()))
+      .catch((e) => next(e));
+  } catch (e) {
+    return next(e);
+  }
 }
 
 module.exports = authMiddleware;

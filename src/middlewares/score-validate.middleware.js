@@ -11,7 +11,7 @@ function validateCreateScore(req, res, next) {
     });
   }
 
-  if (!b?.playerId || Number.isNaN(Number(b.playerId))) {
+  if (b?.playerId == null || Number.isNaN(Number(b.playerId))) {
     errors.push({ field: "playerId", message: "playerId must be numeric" });
   }
 

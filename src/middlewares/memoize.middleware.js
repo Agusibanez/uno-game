@@ -17,7 +17,12 @@ function memoizeMiddleware(config = {}) {
 
   function middleware(req, res, next) {
     try {
-      if (!methods.includes(req.method)) return next();
+      if (!methods.includes(req.method)) {
+        if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+          cache.clear();
+        }
+        return next();
+      }
 
       if (req.headers.authorization) return next();
 
