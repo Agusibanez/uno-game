@@ -22,7 +22,7 @@ const GamePlayer = sequelize.define(
     indexes: [
       {
         unique: true,
-        fields: ["gameId", "playerId"], // evita duplicados
+        fields: ["gameId", "playerId"],
       },
     ],
   },

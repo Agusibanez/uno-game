@@ -102,7 +102,7 @@ describe("game.rules.service", () => {
       expect.objectContaining({ action: "play" }),
     );
     expect(game.direction).toBe(-1);
-    expect(result.direction).toBe("counterclockwise");
+    expect(result.direction).toBe("antihorario");
     expect(result.nextPlayer).toBe(3);
     expect(gameRepo.save).toHaveBeenCalledWith(game);
   });
@@ -153,7 +153,7 @@ describe("game.rules.service", () => {
     });
 
     await expect(service.playCard(13, 1, { cardId: 201 })).rejects.toThrow(
-      "Wild cards require chosenColor",
+      "Las cartas wild requieren chosenColor",
     );
   });
 
@@ -234,7 +234,7 @@ describe("game.rules.service", () => {
     cardRepo.findPlayableInHand.mockResolvedValue([{ id: 1 }]);
 
     await expect(service.drawCard(11, 8)).rejects.toThrow(
-      "You have a playable card. You must play.",
+      "Tienes una carta jugable. Debes jugar.",
     );
   });
 
@@ -345,7 +345,7 @@ describe("game.rules.service", () => {
 
     await expect(
       service.dealCards(18, 1, { cardsPerPlayer: 7 }),
-    ).rejects.toThrow("Cards have already been dealt in this game");
+    ).rejects.toThrow("Las cartas ya fueron repartidas en esta partida");
   });
 
   test("playCard ends game when player has no cards left", async () => {
@@ -372,7 +372,7 @@ describe("game.rules.service", () => {
 
     const res = await service.playCard(20, 1, { cardId: 500 });
 
-    expect(res.message).toMatch(/has won the game/i);
+    expect(res.message).toMatch(/gano la partida/i);
     expect(game.status).toBe("ended");
     expect(gameRepo.save).toHaveBeenCalledWith(game);
     expect(scoreRepo.updateById).toHaveBeenCalled();
@@ -385,7 +385,7 @@ describe("game.rules.service", () => {
 
     const res = await service.sayUno(21, 9);
 
-    expect(res).toEqual({ message: "UNO said successfully." });
+    expect(res).toEqual({ message: "Cantaste UNO correctamente." });
     expect(gamePlayerRepo.setUno).toHaveBeenCalledWith(21, 9, true);
   });
 
@@ -395,7 +395,7 @@ describe("game.rules.service", () => {
     cardRepo.countHand.mockResolvedValue(3);
 
     await expect(service.sayUno(22, 9)).rejects.toThrow(
-      "You can say UNO only when you have exactly 1 card",
+      "Solo puedes decir UNO cuando tienes exactamente 1 carta",
     );
   });
 
@@ -413,7 +413,7 @@ describe("game.rules.service", () => {
 
     const res = await service.challengeUno(23, 1, 2);
 
-    expect(res.message).toMatch(/Challenge successful/i);
+    expect(res.message).toMatch(/Desafio exitoso/i);
     expect(cardRepo.moveToHand).toHaveBeenCalledTimes(2);
     expect(gamePlayerRepo.setUno).toHaveBeenCalledWith(23, 2, false);
   });

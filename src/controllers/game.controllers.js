@@ -14,7 +14,7 @@ const create = asyncHandler(async (req, res) => {
   const result = await service.createGame(userId, req.body);
   res
     .status(201)
-    .json({ message: "Game created successfully", game_id: result.game_id });
+    .json({ message: "Partida creada correctamente", game_id: result.game_id });
 });
 
 const read = asyncHandler(async (req, res) => {
@@ -36,7 +36,7 @@ const remove = asyncHandler(async (req, res) => {
   if (id === null) return;
 
   await service.deleteGame(id);
-  res.json({ message: "Game deleted" });
+  res.json({ message: "Partida eliminada" });
 });
 
 const join = asyncHandler(async (req, res) => {
@@ -47,7 +47,7 @@ const join = asyncHandler(async (req, res) => {
   if (userId === null) return;
 
   await service.joinGame(gameId, userId);
-  res.json({ message: "User joined the game successfully" });
+  res.json({ message: "Te uniste a la partida correctamente" });
 });
 
 const ready = asyncHandler(async (req, res) => {
@@ -58,7 +58,7 @@ const ready = asyncHandler(async (req, res) => {
   if (userId === null) return;
 
   await service.readyGame(gameId, userId);
-  res.json({ message: "Player is ready" });
+  res.json({ message: "Jugador listo" });
 });
 
 const start = asyncHandler(async (req, res) => {
@@ -69,7 +69,7 @@ const start = asyncHandler(async (req, res) => {
   if (userId === null) return;
 
   await service.startGame(gameId, userId);
-  res.json({ message: "Game started successfully" });
+  res.json({ message: "Partida iniciada correctamente" });
 });
 
 const leave = asyncHandler(async (req, res) => {
@@ -80,7 +80,7 @@ const leave = asyncHandler(async (req, res) => {
   if (userId === null) return;
 
   await service.leaveGame(gameId, userId);
-  res.json({ message: "User left the game successfully" });
+  res.json({ message: "Saliste de la partida correctamente" });
 });
 
 const end = asyncHandler(async (req, res) => {
@@ -91,7 +91,7 @@ const end = asyncHandler(async (req, res) => {
   if (userId === null) return;
 
   await service.endGame(gameId, userId);
-  res.json({ message: "Game ended successfully" });
+  res.json({ message: "Partida finalizada correctamente" });
 });
 
 const state = asyncHandler(async (req, res) => {
@@ -182,7 +182,7 @@ const challengeUno = asyncHandler(async (req, res) => {
 
   const challenged = parseIntParam(req.body?.challengedPlayerId);
   if (challenged === null) {
-    return res.status(400).json({ message: "Invalid challengedPlayerId" });
+    return res.status(400).json({ message: "challengedPlayerId invalido" });
   }
 
   const result = await gameRulesService.challengeUno(

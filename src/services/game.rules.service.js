@@ -19,17 +19,17 @@ async function dealCards(gameId, actorPlayerId, payload) {
   validateDealPayload(payload);
 
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   assertGameStarted(game);
 
   if (game.ownerId !== actorPlayerId) {
-    throw new ForbiddenError("Only the game owner can deal cards");
+    throw new ForbiddenError("Solo el owner de la partida puede repartir cartas");
   }
 
   const players = await gamePlayerRepo.findAllByGame(gameId);
   if (!players || players.length < 2) {
-    throw new ConflictError("Not enough players to deal");
+    throw new ConflictError("No hay suficientes jugadores para repartir");
   }
 
   const handCounts = await Promise.all(
@@ -37,7 +37,7 @@ async function dealCards(gameId, actorPlayerId, payload) {
   );
   const alreadyDealt = handCounts.some((count) => count > 0);
   if (alreadyDealt) {
-    throw new ConflictError("Cards have already been dealt in this game");
+    throw new ConflictError("Las cartas ya fueron repartidas en esta partida");
   }
 
   const cardsPerPlayer = payload.cardsPerPlayer;
@@ -51,7 +51,7 @@ async function dealCards(gameId, actorPlayerId, payload) {
   }
 
   return {
-    message: "Cards dealt successfully.",
+    message: "Cartas repartidas correctamente.",
     players: result,
   };
 }
@@ -60,7 +60,7 @@ async function playCard(gameId, playerId, body) {
   const { cardId, chosenColor } = body;
 
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   assertGameStarted(game);
   assertPlayerTurn(game, playerId);
@@ -68,7 +68,7 @@ async function playCard(gameId, playerId, body) {
   const card = await cardRepo.findCardInHand(gameId, playerId, cardId);
 
   if (!card) {
-    throw new ConflictError("Card not in your hand");
+    throw new ConflictError("Esa carta no esta en tu mano");
   }
 
   const { discardTopColor, discardTopValue } = game;
@@ -79,17 +79,17 @@ async function playCard(gameId, playerId, body) {
 
   if (hasDrawStack && !drawPenaltyCard) {
     throw new ConflictError(
-      "You must play a +2 or wild+4 to stack, or draw penalty cards.",
+      "Debes jugar un +2 o wild+4 para apilar, o robar las cartas de penalizacion.",
     );
   }
 
   if (!hasDrawStack && !isPlayable(card, discardTopColor, discardTopValue)) {
-    throw new ConflictError("Invalid card. Must match color or value.");
+    throw new ConflictError("Carta invalida. Debe coincidir color o valor.");
   }
 
   const selectedColor = normalizeChosenColor(chosenColor);
   if (card.color === "black" && !selectedColor) {
-    throw new ConflictError("Wild cards require chosenColor");
+    throw new ConflictError("Las cartas wild requieren chosenColor");
   }
 
   await cardRepo.moveToDiscard(card.id);
@@ -108,10 +108,16 @@ async function playCard(gameId, playerId, body) {
 
     await calculateScores(gameId, playerId);
 
+    const playersWithInfo = await gamePlayerRepo.findAllByGameWithPlayer?.(gameId);
+    const winnerInfo = playersWithInfo?.find((p) => p.playerId === playerId);
+    const winnerName =
+      winnerInfo?.player?.username || winnerInfo?.player?.name || `Jugador ${playerId}`;
+
     await gameRepo.save(game);
 
     return {
-      message: `Player ${playerId} has won the game!`,
+      message: `${winnerName} gano la partida!`,
+      winnerName,
     };
   }
 
@@ -139,8 +145,8 @@ async function playCard(gameId, playerId, body) {
   await gameRepo.save(game);
 
   return {
-    message: "Card played successfully.",
-    direction: game.direction === -1 ? "counterclockwise" : "clockwise",
+    message: "Carta jugada correctamente.",
+    direction: game.direction === -1 ? "antihorario" : "horario",
     drawStack: game.drawStack || 0,
     nextPlayer: game.currentPlayerId,
   };
@@ -148,7 +154,7 @@ async function playCard(gameId, playerId, body) {
 
 function assertPlayerTurn(game, playerId) {
   if (game.currentPlayerId !== playerId) {
-    throw new ForbiddenError("It is not your turn");
+    throw new ForbiddenError("No es tu turno");
   }
 }
 
@@ -180,7 +186,7 @@ async function dealOneEachRecursive(gameId, players, idx) {
   if (idx >= players.length) return;
 
   const top = await cardRepo.findDeckTop(gameId);
-  if (!top) throw new ConflictError("Deck is empty");
+  if (!top) throw new ConflictError("El mazo esta vacio");
 
   await cardRepo.moveToHand(top.id, players[idx].playerId);
 
@@ -195,7 +201,7 @@ async function advanceTurn(game, steps = 1) {
   );
 
   if (currentIndex === -1) {
-    throw new ConflictError("Current player invalid");
+    throw new ConflictError("Jugador actual invalido");
   }
 
   const direction = game.direction === -1 ? -1 : 1;
@@ -211,7 +217,7 @@ async function advanceTurn(game, steps = 1) {
 
 async function drawCard(gameId, playerId) {
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   assertGameStarted(game);
   assertPlayerTurn(game, playerId);
@@ -243,7 +249,7 @@ async function drawCard(gameId, playerId) {
     await gameRepo.save(game);
 
     return {
-      message: `Player drew ${drawnCards.length} penalty card(s). Turn ended.`,
+      message: `Robaste ${drawnCards.length} carta(s) de penalizacion. Turno finalizado.`,
       cardsDrawn: drawnCards,
       drawnCard: drawnCards.length > 0 ? drawnCards[drawnCards.length - 1] : null,
       playable: false,
@@ -263,7 +269,7 @@ async function drawCard(gameId, playerId) {
   );
 
   if (playable && playable.length > 0) {
-    throw new ConflictError("You have a playable card. You must play.");
+    throw new ConflictError("Tienes una carta jugable. Debes jugar.");
   }
 
   const drawResult = await drawSingleCard(gameId, playerId, topColor, topValue);
@@ -285,7 +291,7 @@ async function drawCard(gameId, playerId) {
   await gameRepo.save(game);
 
   return {
-    message: `Player drew a card from the deck. Turn ended.`,
+    message: "Robaste una carta del mazo. Turno finalizado.",
     cardsDrawn: drawResult.drawnCards,
     drawnCard:
       drawResult.drawnCards.length > 0
@@ -300,7 +306,7 @@ async function drawFixedCountRecursive(gameId, playerId, remaining, acc) {
   if (remaining <= 0) return acc;
 
   const topDeck = await cardRepo.findDeckTop(gameId);
-  if (!topDeck) throw new ConflictError("Deck is empty");
+  if (!topDeck) throw new ConflictError("El mazo esta vacio");
 
   await cardRepo.moveToHand(topDeck.id, playerId);
   const nextAcc = [...acc, `${topDeck.color} ${topDeck.value}`];
@@ -316,7 +322,7 @@ async function drawSingleCard(
   const topDeck = await cardRepo.findDeckTop(gameId);
 
   if (!topDeck) {
-    throw new ConflictError("Deck is empty");
+    throw new ConflictError("El mazo esta vacio");
   }
 
   await cardRepo.moveToHand(topDeck.id, playerId);
@@ -329,31 +335,31 @@ async function drawSingleCard(
 
 async function sayUno(gameId, playerId) {
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   assertGameStarted(game);
 
   const gp = await gamePlayerRepo.findOne({ gameId, playerId });
-  if (!gp) throw new NotFoundError("Player not in game");
+  if (!gp) throw new NotFoundError("Jugador no esta en la partida");
 
   const handCount = await cardRepo.countHand(gameId, playerId);
 
   if (handCount !== 1) {
     throw new ConflictError(
-      "You can say UNO only when you have exactly 1 card",
+      "Solo puedes decir UNO cuando tienes exactamente 1 carta",
     );
   }
 
   await gamePlayerRepo.setUno(gameId, playerId, true);
 
   return {
-    message: "UNO said successfully.",
+    message: "Cantaste UNO correctamente.",
   };
 }
 
 async function challengeUno(gameId, challengerId, challengedPlayerId) {
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   assertGameStarted(game);
 
@@ -363,7 +369,7 @@ async function challengeUno(gameId, challengerId, challengedPlayerId) {
   });
 
   if (!challenged) {
-    throw new NotFoundError("Challenged player not in game");
+    throw new NotFoundError("El jugador desafiado no esta en la partida");
   }
 
   const handCount = await cardRepo.countHand(gameId, challengedPlayerId);
@@ -374,12 +380,12 @@ async function challengeUno(gameId, challengerId, challengedPlayerId) {
     await gamePlayerRepo.setUno(gameId, challengedPlayerId, false);
 
     return {
-      message: `Challenge successful. Player ${challengedPlayerId} forgot to say UNO and draws 2 cards.`,
+      message: `Desafio exitoso. El jugador ${challengedPlayerId} olvido decir UNO y roba 2 cartas.`,
     };
   }
 
   return {
-    message: "Challenge failed. Player said UNO on time.",
+    message: "Desafio fallido. El jugador dijo UNO a tiempo.",
   };
 }
 
@@ -387,7 +393,7 @@ async function drawPenaltyRecursive(gameId, playerId, remaining) {
   if (remaining <= 0) return;
 
   const topDeck = await cardRepo.findDeckTop(gameId);
-  if (!topDeck) throw new ConflictError("Deck is empty");
+  if (!topDeck) throw new ConflictError("El mazo esta vacio");
 
   await cardRepo.moveToHand(topDeck.id, playerId);
 
@@ -415,21 +421,36 @@ async function calculateScores(gameId, winnerId) {
 
 async function getFullStatus(gameId) {
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   const players = await gamePlayerRepo.findAllByGame(gameId);
+  const playersWithInfo =
+    (await gamePlayerRepo.findAllByGameWithPlayer?.(gameId)) || [];
 
   const hands = {};
+  const participants = [];
 
   for (const p of players) {
     const hand = await cardRepo.findHand(gameId, p.playerId);
     hands[`player_${p.playerId}`] = hand.map((c) => `${c.color} ${c.value}`);
+
+    const info = playersWithInfo.find((row) => row.playerId === p.playerId);
+    const name =
+      info?.player?.username || info?.player?.name || `player_${p.playerId}`;
+    participants.push({
+      playerId: p.playerId,
+      username: name,
+      handCount: hand.length,
+      saidUno: Boolean(p.saidUno),
+      saidUnoAt: p.saidUnoAt || null,
+    });
   }
 
   return {
     currentPlayer: game.currentPlayerId,
     topCard: `${game.discardTopColor} ${game.discardTopValue}`,
     hands,
+    participants,
   };
 }
 
@@ -458,3 +479,4 @@ module.exports = {
   getFullStatus,
   getMyHand,
 };
+

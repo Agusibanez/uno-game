@@ -1,5 +1,6 @@
 export default function PlayersPanel({
   players,
+  currentPlayer,
   isJoined,
   isWaiting,
   isOwner,
@@ -10,9 +11,8 @@ export default function PlayersPanel({
   onDeal,
 }) {
   return (
-    <article className="card">
-      <h2>Sala</h2>
-      <div className="row wrap">
+    <article className="card players-strip">
+      <div className="row wrap players-actions">
         {!isJoined && isWaiting ? (
           <button className="btn" onClick={onJoin} type="button">
             Unirme
@@ -35,12 +35,16 @@ export default function PlayersPanel({
         ) : null}
       </div>
 
-      <h3>Jugadores</h3>
-      <ul className="list">
+      <div className="players-list-row">
         {players.map((player) => (
-          <li key={player}>{player}</li>
+          <span
+            key={player}
+            className={`player-chip${player === currentPlayer ? " current" : ""}`}
+          >
+            {player}
+          </span>
         ))}
-      </ul>
+      </div>
     </article>
   );
 }

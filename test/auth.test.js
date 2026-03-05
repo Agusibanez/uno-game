@@ -85,7 +85,6 @@ describe("Auth", () => {
     test("Register missing fields -> 400", async () => {
       const res = await request(app).post("/api/auth/register").send({
         username: "ab",
-        // email missing
         password: "password123",
       });
       expect(res.status).toBe(400);

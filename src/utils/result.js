@@ -74,12 +74,6 @@ function err(error) {
   return new Err(error);
 }
 
-/**
- * ResultAsync: Monad para encadenar Promises con manejo de error controlado.
- * - fromPromise: convierte una Promise en ResultAsync
- * - map / chain / mapError: encadenamiento estilo FP
- * - run: ejecuta y devuelve Promise<Result>
- */
 class ResultAsync {
   constructor(thunk) {
     this.thunk = thunk; 
@@ -108,7 +102,6 @@ class ResultAsync {
   }
 
   chain(fn) {
-    // fn: (value) => ResultAsync
     return new ResultAsync(() =>
       this.thunk().then((r) => {
         if (r.isErr()) return r;

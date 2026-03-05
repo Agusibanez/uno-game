@@ -1,4 +1,3 @@
-// src/app.js
 const express = require("express");
 const cardRoutes = require("./routes/card.routes");
 const gameRoutes = require("./routes/game.routes");

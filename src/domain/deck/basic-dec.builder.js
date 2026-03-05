@@ -2,10 +2,6 @@ function buildBasicDeck(gameId) {
   const colors = ["red", "blue", "green", "yellow"];
   const cards = [];
 
-  // UNO clasico:
-  // - Por color: 1x 0, 2x (1..9), 2x skip, 2x reverse, 2x +2  => 25 por color
-  // - Negro: 4x wild, 4x wild+4                               => 8
-  // Total = 4*25 + 8 = 108
   for (const color of colors) {
     cards.push({ color, value: "0", gameId });
 

@@ -18,7 +18,7 @@ async function createGame(ownerId, payload) {
   const realOwnerId = ownerId ?? payload.ownerId ?? payload.playerId;
 
   if (!realOwnerId) {
-    throw new ConflictError("ownerId/playerId is required to create a game");
+    throw new ConflictError("ownerId/playerId es requerido para crear una partida");
   }
 
   const created = await gameRepo.create({
@@ -46,13 +46,13 @@ async function createGame(ownerId, payload) {
 
 async function getGame(id) {
   const game = await gameRepo.findById(id);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
   return game;
 }
 
 async function updateGame(id, payload) {
   const game = await gameRepo.findById(id);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   await gameRepo.updateById(id, payload);
   return gameRepo.findById(id);
@@ -72,15 +72,15 @@ async function deleteGame(id) {
 
 async function joinGame(gameId, playerId) {
   const game = await gameRepo.findByIdWithPlayers(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   if (game.status !== "waiting")
-    throw new ConflictError("Game already started");
+    throw new ConflictError("La partida ya inicio");
   if (game.players.length >= game.maxPlayers)
-    throw new ConflictError("Game is full");
+    throw new ConflictError("La partida esta llena");
 
   const alreadyJoined = await gamePlayerRepo.findOne({ gameId, playerId });
-  if (alreadyJoined) throw new ConflictError("Player already joined the game");
+  if (alreadyJoined) throw new ConflictError("El jugador ya se unio a la partida");
 
   await gamePlayerRepo.create({ gameId, playerId });
 
@@ -92,12 +92,12 @@ async function joinGame(gameId, playerId) {
 
 async function readyGame(gameId, playerId) {
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
   if (game.status !== "waiting")
-    throw new ConflictError("Game already started");
+    throw new ConflictError("La partida ya inicio");
 
   const gp = await gamePlayerRepo.findOne({ gameId, playerId });
-  if (!gp) throw new NotFoundError("Player not in game");
+  if (!gp) throw new NotFoundError("Jugador no esta en la partida");
 
   await gamePlayerRepo.setReady(gameId, playerId, true);
   return { ready: true };
@@ -105,19 +105,19 @@ async function readyGame(gameId, playerId) {
 
 async function startGame(gameId, playerId) {
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   if (!game.ownerId || game.ownerId !== playerId)
-    throw new ForbiddenError("Only the game owner can start the game");
+    throw new ForbiddenError("Solo el owner puede iniciar la partida");
   if (game.status !== "waiting")
-    throw new ConflictError("Game already started");
+    throw new ConflictError("La partida ya inicio");
 
   const players = await gamePlayerRepo.findAllByGame(gameId);
   if (players.length < 2)
-    throw new ConflictError("Not enough players to start");
+    throw new ConflictError("No hay suficientes jugadores para iniciar");
 
   const allReady = players.every((p) => p.isReady === true);
-  if (!allReady) throw new ConflictError("Not all players are ready");
+  if (!allReady) throw new ConflictError("No todos los jugadores estan listos");
 
   game.currentPlayerId = players[0].playerId;
   game.status = "started";
@@ -141,10 +141,10 @@ async function startGame(gameId, playerId) {
 
 async function leaveGame(gameId, playerId) {
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   const gp = await gamePlayerRepo.findOne({ gameId, playerId });
-  if (!gp) throw new NotFoundError("Player not in game");
+  if (!gp) throw new NotFoundError("Jugador no esta en la partida");
 
   await gamePlayerRepo.destroy(gp);
   return { left: true };
@@ -152,11 +152,11 @@ async function leaveGame(gameId, playerId) {
 
 async function endGame(gameId, playerId) {
   const game = await gameRepo.findById(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   if (!game.ownerId || game.ownerId !== playerId)
-    throw new ForbiddenError("Only the game owner can end the game");
-  if (game.status === "ended") throw new ConflictError("Game already ended");
+    throw new ForbiddenError("Solo el owner puede finalizar la partida");
+  if (game.status === "ended") throw new ConflictError("La partida ya finalizo");
 
   game.status = "ended";
   await gameRepo.save(game);
@@ -165,13 +165,13 @@ async function endGame(gameId, playerId) {
 
 async function getGameState(gameId) {
   const game = await gameRepo.findState(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
   return { game_id: game.id, state: game.status };
 }
 
 async function getGamePlayers(gameId) {
   const game = await gameRepo.findPlayersForList(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
   return {
     game_id: game.id,
     players: game.players.map((p) => p.username || p.name),
@@ -180,7 +180,7 @@ async function getGamePlayers(gameId) {
 
 async function getCurrentPlayer(gameId) {
   const game = await gameRepo.findCurrentPlayer(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   const name = game.currentPlayer
     ? game.currentPlayer.username || game.currentPlayer.name
@@ -190,7 +190,7 @@ async function getCurrentPlayer(gameId) {
 
 async function getTopCard(gameId) {
   const game = await gameRepo.findTopCardFields(gameId);
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   const top =
     game.discardTopColor && game.discardTopValue
@@ -202,7 +202,7 @@ async function getTopCard(gameId) {
 
 async function getGameScores(gameId) {
   const game = await gameRepo.findById(gameId, { attributes: ["id"] });
-  if (!game) throw new NotFoundError("Game not found");
+  if (!game) throw new NotFoundError("Partida no encontrada");
 
   const gps = await gamePlayerRepo.findAllByGameWithPlayer(gameId);
   const rows = await scoreRepo.findAllByGame(gameId);

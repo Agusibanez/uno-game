@@ -9,8 +9,11 @@ export default function HandPanel({
   chosenColor,
   onChosenColorChange,
   onPlay,
-  onDraw,
   onSayUno,
+  onChallenge,
+  challengablePlayers = [],
+  challengedPlayerId,
+  onChallengedPlayerIdChange,
 }) {
   const wildSelected = isWildCard(selectedCard);
 
@@ -37,11 +40,23 @@ export default function HandPanel({
         <button className="btn primary" onClick={onPlay} type="button" disabled={!selectedCardId}>
           Jugar carta
         </button>
-        <button className="btn" onClick={onDraw} type="button">
-          Robar
-        </button>
         <button className="btn" onClick={onSayUno} type="button">
           Decir UNO
+        </button>
+        <select
+          className="select"
+          value={challengedPlayerId || ""}
+          onChange={(e) => onChallengedPlayerIdChange(Number(e.target.value) || "")}
+        >
+          <option value="">Elegir jugador para desafiar...</option>
+          {challengablePlayers.map((player) => (
+            <option key={player.playerId} value={player.playerId}>
+              {player.username}
+            </option>
+          ))}
+        </select>
+        <button className="btn" onClick={onChallenge} type="button" disabled={!challengedPlayerId}>
+          Desafiar UNO
         </button>
       </div>
     </article>

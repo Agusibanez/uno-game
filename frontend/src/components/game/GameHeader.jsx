@@ -1,16 +1,10 @@
-import UnoCard from "../cards/UnoCard";
-import { parseTopCard } from "../../utils/card-ui";
-
 export default function GameHeader({
   gameId,
   state,
   currentPlayer,
-  topCard,
   drawStack,
   onBack,
 }) {
-  const parsedTopCard = parseTopCard(topCard);
-
   return (
     <header className="game-header">
       <div className="game-header-info">
@@ -21,15 +15,6 @@ export default function GameHeader({
         <p className="muted">
           Penalidad acumulada: <b>{drawStack}</b>
         </p>
-      </div>
-
-      <div className="game-topcard">
-        <p className="muted">Carta superior</p>
-        {parsedTopCard ? (
-          <UnoCard card={parsedTopCard} disabled />
-        ) : (
-          <div className="top-placeholder">Sin carta</div>
-        )}
       </div>
 
       <button className="btn" onClick={onBack} type="button">

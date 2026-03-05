@@ -51,7 +51,6 @@ describe("Game Flow", () => {
       .post(`/api/games/${gameId}/join`)
       .set("Authorization", `Bearer ${p2.token}`);
 
-    // ready owner y p2
     await request(app)
       .post(`/api/games/${gameId}/ready`)
       .set("Authorization", `Bearer ${owner.token}`);
@@ -60,7 +59,6 @@ describe("Game Flow", () => {
       .post(`/api/games/${gameId}/ready`)
       .set("Authorization", `Bearer ${p2.token}`);
 
-    // start por owner
     const start = await request(app)
       .post(`/api/games/${gameId}/start`)
       .set("Authorization", `Bearer ${owner.token}`);
@@ -68,19 +66,16 @@ describe("Game Flow", () => {
     expect(start.status).toBe(200);
     expect(start.body).toEqual({ message: "Game started successfully" });
 
-    // state
     const state = await request(app).get(`/api/games/${gameId}/state`);
     expect(state.status).toBe(200);
     expect(state.body.state).toBe("started");
 
-    // current player
     const current = await request(app).get(
       `/api/games/${gameId}/current-player`,
     );
     expect(current.status).toBe(200);
     expect(current.body.current_player).not.toBe(null);
 
-    // top card
     const top = await request(app).get(`/api/games/${gameId}/top-card`);
     expect(top.status).toBe(200);
     expect(top.body).toHaveProperty("top_card");

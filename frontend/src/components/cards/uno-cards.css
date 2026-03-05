@@ -1,19 +1,18 @@
 .game-header {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   gap: 20px;
-  align-items: start;
-  margin-bottom: 16px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .game-header-info h1 {
   margin: 0;
 }
 
-.game-topcard {
+.game-page {
   display: grid;
-  justify-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .top-placeholder {
@@ -27,16 +26,149 @@
   background: #11161f;
 }
 
-.uno-hand-grid {
+.players-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
   gap: 10px;
+}
+
+.players-actions {
+  justify-content: flex-start;
+}
+
+.players-list-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.player-chip {
+  border: 1px solid var(--border);
+  background: #f7efe4;
+  color: #2b3345;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.player-chip.current {
+  background: #d8f2df;
+  border-color: #98d7a8;
+  color: #155d2b;
+  font-weight: 700;
+}
+
+.game-table {
+  min-height: 260px;
+  display: grid;
+  align-items: center;
+}
+
+.table-zone {
+  display: flex;
+  gap: 38px;
+  align-items: center;
+  justify-content: center;
+}
+
+.draw-pile {
+  position: relative;
+  width: 120px;
+  height: 180px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.draw-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  background: linear-gradient(145deg, #1a2334, #101623);
+}
+
+.draw-layer.layer-a {
+  transform: translate(8px, 8px);
+  opacity: 0.55;
+}
+
+.draw-layer.layer-b {
+  transform: translate(4px, 4px);
+  opacity: 0.75;
+}
+
+.draw-pile::before {
+  content: "UNO";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  background: linear-gradient(145deg, #2b3b5d, #141d2f);
+  display: grid;
+  place-items: center;
+  color: #f2f3f7;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.draw-pile:hover::before {
+  transform: translateY(-2px);
+}
+
+.draw-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -28px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.discard-zone {
+  position: relative;
+  width: 130px;
+  min-height: 190px;
+  display: grid;
+  place-items: center;
+}
+
+.discard-card-pop {
+  animation: discard-pop 260ms ease;
+}
+
+.uno-hand-fan-wrap {
   margin-bottom: 14px;
 }
 
+.hand-selected {
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.uno-hand-fan {
+  position: relative;
+  height: 220px;
+  display: block;
+  overflow: visible;
+}
+
+.uno-hand-item {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(calc(var(--offset) * 56px));
+  z-index: var(--z);
+}
+
+.uno-hand-item.selected {
+  transform: translateX(calc(var(--offset) * 56px)) translateY(-46px);
+}
+
 .uno-card {
-  width: 100%;
-  min-width: 110px;
+  width: 112px;
+  min-width: 112px;
   height: 170px;
   border-radius: 14px;
   border: 2px solid rgba(255, 255, 255, 0.2);
@@ -46,12 +178,18 @@
   background: #161616;
   padding: 6px;
   cursor: pointer;
+  box-shadow:
+    0 10px 18px rgba(7, 12, 22, 0.28),
+    0 2px 6px rgba(7, 12, 22, 0.22);
   transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
   animation: card-enter 220ms ease both;
 }
 
 .uno-card:hover {
   transform: translateY(-2px);
+  box-shadow:
+    0 14px 24px rgba(7, 12, 22, 0.34),
+    0 4px 10px rgba(7, 12, 22, 0.24);
 }
 
 .uno-card.selected {
@@ -109,34 +247,34 @@
   display: block;
 }
 
-.uno-hand-grid .uno-card:nth-child(1) {
+.uno-hand-item:nth-child(1) .uno-card {
   animation-delay: 0ms;
 }
-.uno-hand-grid .uno-card:nth-child(2) {
+.uno-hand-item:nth-child(2) .uno-card {
   animation-delay: 20ms;
 }
-.uno-hand-grid .uno-card:nth-child(3) {
+.uno-hand-item:nth-child(3) .uno-card {
   animation-delay: 40ms;
 }
-.uno-hand-grid .uno-card:nth-child(4) {
+.uno-hand-item:nth-child(4) .uno-card {
   animation-delay: 60ms;
 }
-.uno-hand-grid .uno-card:nth-child(5) {
+.uno-hand-item:nth-child(5) .uno-card {
   animation-delay: 80ms;
 }
-.uno-hand-grid .uno-card:nth-child(6) {
+.uno-hand-item:nth-child(6) .uno-card {
   animation-delay: 100ms;
 }
-.uno-hand-grid .uno-card:nth-child(7) {
+.uno-hand-item:nth-child(7) .uno-card {
   animation-delay: 120ms;
 }
-.uno-hand-grid .uno-card:nth-child(8) {
+.uno-hand-item:nth-child(8) .uno-card {
   animation-delay: 140ms;
 }
-.uno-hand-grid .uno-card:nth-child(9) {
+.uno-hand-item:nth-child(9) .uno-card {
   animation-delay: 160ms;
 }
-.uno-hand-grid .uno-card:nth-child(10) {
+.uno-hand-item:nth-child(10) .uno-card {
   animation-delay: 180ms;
 }
 
@@ -181,6 +319,24 @@
     grid-template-columns: 1fr;
     justify-items: start;
   }
+
+  .table-zone {
+    gap: 14px;
+  }
+
+  .uno-hand-fan {
+    height: auto;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .uno-hand-item,
+  .uno-hand-item.selected {
+    position: static;
+    transform: none;
+  }
 }
 
 @keyframes card-enter {
@@ -203,5 +359,16 @@
   }
   100% {
     transform: translateY(-3px) scale(1.02);
+  }
+}
+
+@keyframes discard-pop {
+  from {
+    transform: translateY(10px) scale(0.94);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
   }
 }

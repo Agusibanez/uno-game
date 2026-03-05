@@ -9,7 +9,6 @@ describe("Scores CRUD", () => {
       email: "owner@mail.com",
     });
 
-    // crear un player (para score.playerId)
     const playerRes = await request(app).post("/api/players").send({
       name: "P1",
       age: 20,
