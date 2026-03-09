@@ -44,6 +44,14 @@ async function setUno(gameId, playerId, saidUno) {
   return GamePlayer.findOne({ where: { gameId, playerId } });
 }
 
+async function resetForRematch(gameId) {
+  await GamePlayer.update(
+    { isReady: false, saidUno: false, saidUnoAt: null },
+    { where: { gameId } },
+  );
+  return findAllByGame(gameId);
+}
+
 module.exports = {
   create,
   findOne,
@@ -53,4 +61,5 @@ module.exports = {
   findAllByGameWithPlayer,
   setReady,
   setUno,
+  resetForRematch,
 };

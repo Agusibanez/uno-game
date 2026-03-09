@@ -61,6 +61,58 @@
   min-height: 260px;
   display: grid;
   align-items: center;
+  gap: 18px;
+}
+
+.opponents-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+.opponent-hand {
+  min-width: 170px;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.opponent-hand.current .opponent-name {
+  color: #0d7a3e;
+  font-weight: 700;
+}
+
+.opponent-name {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.opponent-cards {
+  height: 94px;
+  width: min(360px, 88vw);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.opponent-card-back {
+  width: 58px;
+  height: 88px;
+  border-radius: 9px;
+  border: 2px solid #e6eef8;
+  background:
+    linear-gradient(130deg, transparent 0%, transparent 35%, #f03d3d 36%, #f03d3d 45%, transparent 46%, transparent 100%),
+    linear-gradient(320deg, transparent 0%, transparent 52%, #3ab54a 53%, #3ab54a 62%, transparent 63%, transparent 100%),
+    linear-gradient(25deg, transparent 0%, transparent 64%, #2e7df6 65%, #2e7df6 74%, transparent 75%, transparent 100%),
+    repeating-linear-gradient(135deg, #172235 0 4px, #101827 4px 8px);
+  box-shadow: 0 8px 16px rgba(8, 14, 25, 0.35);
+  margin-left: calc(var(--offset) * -16px);
+}
+
+.opponent-card-back:first-child {
+  margin-left: 0;
 }
 
 .table-zone {
@@ -158,12 +210,17 @@
   position: absolute;
   left: 50%;
   bottom: 0;
-  transform: translateX(calc(var(--offset) * 56px));
+  transform: translateX(calc(var(--offset) * 56px + var(--spread, 0px))) translateY(var(--raise, 0px));
   z-index: var(--z);
+  transition: transform 140ms ease, z-index 140ms ease;
 }
 
 .uno-hand-item.selected {
-  transform: translateX(calc(var(--offset) * 56px)) translateY(-46px);
+  transform: translateX(calc(var(--offset) * 56px + var(--spread, 0px))) translateY(var(--raise, -46px));
+}
+
+.uno-hand-item.hovered {
+  transform: translateX(calc(var(--offset) * 56px + var(--spread, 0px))) translateY(var(--raise, -22px));
 }
 
 .uno-card {
@@ -322,6 +379,24 @@
 
   .table-zone {
     gap: 14px;
+  }
+
+  .opponents-row {
+    gap: 10px;
+  }
+
+  .opponent-hand {
+    min-width: 140px;
+  }
+
+  .opponent-cards {
+    height: 82px;
+  }
+
+  .opponent-card-back {
+    width: 50px;
+    height: 76px;
+    margin-left: calc(var(--offset) * -13px);
   }
 
   .uno-hand-fan {

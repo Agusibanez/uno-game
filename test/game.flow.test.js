@@ -24,7 +24,7 @@ describe("Game Flow", () => {
       .set("Authorization", `Bearer ${p2.token}`);
 
     expect(join.status).toBe(200);
-    expect(join.body).toEqual({ message: "User joined the game successfully" });
+    expect(join.body).toEqual({ message: "Te uniste a la partida correctamente" });
 
     const players = await request(app).get(`/api/games/${gameId}/players`);
     expect(players.status).toBe(200);
@@ -64,7 +64,7 @@ describe("Game Flow", () => {
       .set("Authorization", `Bearer ${owner.token}`);
 
     expect(start.status).toBe(200);
-    expect(start.body).toEqual({ message: "Game started successfully" });
+    expect(start.body).toEqual({ message: "Partida iniciada correctamente" });
 
     const state = await request(app).get(`/api/games/${gameId}/state`);
     expect(state.status).toBe(200);
@@ -106,7 +106,7 @@ describe("Game Flow", () => {
       .set("Authorization", `Bearer ${p2.token}`);
 
     expect(leave.status).toBe(200);
-    expect(leave.body).toEqual({ message: "User left the game successfully" });
+    expect(leave.body).toEqual({ message: "Saliste de la partida correctamente" });
   });
 
   test("End game (14)", async () => {
@@ -126,7 +126,7 @@ describe("Game Flow", () => {
       .set("Authorization", `Bearer ${owner.token}`);
 
     expect(end.status).toBe(200);
-    expect(end.body).toEqual({ message: "Game ended successfully" });
+    expect(end.body).toEqual({ message: "Partida finalizada correctamente" });
   });
 
   test("Scores endpoint (19): returns scores map", async () => {
@@ -156,7 +156,7 @@ describe("Game Flow", () => {
   });
 
   describe("Game Flow - Negative / Edge", () => {
-    test("Join twice -> 409", async () => {
+    test("Join twice -> 200 (idempotente)", async () => {
       const owner = await registerAndLogin({
         username: "owner_dup",
         email: "owner_dup@mail.com",
@@ -180,7 +180,8 @@ describe("Game Flow", () => {
       const j2 = await request(app)
         .post(`/api/games/${gameId}/join`)
         .set("Authorization", `Bearer ${p1.token}`);
-      expect(j2.status).toBe(409);
+      expect(j2.status).toBe(200);
+      expect(j2.body).toEqual({ message: "Ya estabas en la partida" });
     });
 
     test("Start not owner -> 403", async () => {

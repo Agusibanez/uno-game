@@ -9,6 +9,7 @@ export default function PlayersPanel({
   onReady,
   onStart,
   onDeal,
+  onRematch,
 }) {
   return (
     <article className="card players-strip">
@@ -31,6 +32,11 @@ export default function PlayersPanel({
         {isOwner && state === "started" ? (
           <button className="btn" onClick={onDeal} type="button">
             Repartir 7
+          </button>
+        ) : null}
+        {isOwner && state === "ended" ? (
+          <button className="btn primary" onClick={onRematch} type="button">
+            Jugar de nuevo
           </button>
         ) : null}
       </div>

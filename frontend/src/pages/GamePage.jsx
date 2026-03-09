@@ -15,7 +15,6 @@ export default function GamePage() {
   const navigate = useNavigate();
   const connectSocket = useAppStore((s) => s.connectSocket);
   const socket = useAppStore((s) => s.socket);
-  const username = useAppStore((s) => s.username);
   const [state, setState] = useState(null);
   const [ownerId, setOwnerId] = useState(null);
   const [myId, setMyId] = useState(null);
@@ -34,31 +33,39 @@ export default function GamePage() {
   const [error, setError] = useState("");
   const announcedUnoRef = useRef(new Set());
   const winnerShownRef = useRef(false);
+  const loadingStatusRef = useRef(false);
 
-  async function loadStatus() {
+  async function loadStatus(options = {}) {
+    if (loadingStatusRef.current) return;
+    loadingStatusRef.current = true;
+
     try {
-      const [g, st, pl, cp, tc, mh, me, full, sc] = await Promise.all([
+      const { withScores = true } = options;
+      const [g, full, mh] = await Promise.all([
         api.get(`/games/${id}`),
-        api.get(`/games/${id}/state`),
-        api.get(`/games/${id}/players`),
-        api.get(`/games/${id}/current-player`),
-        api.get(`/games/${id}/top-card`),
-        api.get(`/games/${id}/my-hand`),
-        api.get("/auth/me"),
         api.get(`/games/${id}/status`),
-        api.get(`/games/${id}/scores`),
+        api.get(`/games/${id}/my-hand`),
       ]);
+
+      const gameState = g.data.status || null;
+      const nextParticipants = full.data.participants || [];
+      const currentPlayerId = full.data.currentPlayer || null;
+      const currentPlayerName =
+        nextParticipants.find((p) => p.playerId === currentPlayerId)?.username || "-";
+
       setOwnerId(g.data.ownerId ?? null);
       setDrawStack(Number(g.data.drawStack || 0));
-      setState(st.data.state);
-      setPlayers(pl.data.players || []);
-      setCurrentPlayer(cp.data.current_player || "-");
-      setTopCard(tc.data.top_card || "-");
+      setState(gameState);
+      setPlayers(nextParticipants.map((p) => p.username));
+      setCurrentPlayer(currentPlayerName);
+      setTopCard(full.data.topCard || "-");
       setHand(mh.data.hand || []);
-      setMyId(me.data.id ?? null);
-      const nextParticipants = full.data.participants || [];
       setParticipants(nextParticipants);
-      setScores(sc.data?.scores || {});
+
+      if (withScores || gameState === "ended") {
+        const sc = await api.get(`/games/${id}/scores`);
+        setScores(sc.data?.scores || {});
+      }
 
       for (const p of nextParticipants) {
         const unoKey = `${p.playerId}:${p.saidUnoAt || "none"}`;
@@ -76,14 +83,30 @@ export default function GamePage() {
       }
     } catch (err) {
       setError(err?.response?.data?.message || "No se pudo cargar el estado");
+    } finally {
+      loadingStatusRef.current = false;
     }
   }
 
   useEffect(() => {
-    loadStatus();
-    const interval = setInterval(loadStatus, 2000);
+    loadStatus({ withScores: true });
+    const interval = setInterval(() => loadStatus(), 8000);
     return () => clearInterval(interval);
   }, [id]);
+
+  useEffect(() => {
+    let mounted = true;
+    api
+      .get("/auth/me")
+      .then((res) => {
+        if (!mounted) return;
+        setMyId(res.data?.id ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!selectedCardId) return;
@@ -110,10 +133,11 @@ export default function GamePage() {
 
   useEffect(() => {
     const active = socket || connectSocket();
+    const onUpdate = () => loadStatus();
     active.emit("join-game", id);
-    active.on("update", loadStatus);
+    active.on("update", onUpdate);
     return () => {
-      active.off("update", loadStatus);
+      active.off("update", onUpdate);
     };
   }, [id, socket, connectSocket]);
 
@@ -224,6 +248,21 @@ export default function GamePage() {
     }
   }
 
+  async function rematchGame() {
+    setError("");
+    setMessage("");
+    try {
+      const res = await api.post(`/games/${id}/rematch`);
+      winnerShownRef.current = false;
+      setSelectedCardId(null);
+      setChallengedPlayerId("");
+      setMessage(res.data.message || "Nueva ronda iniciada");
+      await loadStatus({ withScores: true });
+    } catch (err) {
+      setError(err?.response?.data?.message || "No se pudo iniciar una nueva ronda");
+    }
+  }
+
   async function challengeUno() {
     if (!challengedPlayerId) return;
     setError("");
@@ -246,7 +285,7 @@ export default function GamePage() {
   }
 
   const isOwner = ownerId !== null && myId !== null && ownerId === myId;
-  const isJoined = players.includes(username);
+  const isJoined = myId !== null && participants.some((p) => p.playerId === myId);
   const isWaiting = state === "waiting";
   const selectedCard = hand.find((card) => String(card.id) === String(selectedCardId)) || null;
   const challengablePlayers = participants.filter(
@@ -275,9 +314,17 @@ export default function GamePage() {
         onReady={readyGame}
         onStart={startGame}
         onDeal={dealCards}
+        onRematch={rematchGame}
       />
 
-      <GameTable topCard={topCard} onDraw={drawCard} discardVersion={discardVersion} />
+      <GameTable
+        topCard={topCard}
+        onDraw={drawCard}
+        discardVersion={discardVersion}
+        participants={participants}
+        myId={myId}
+        currentPlayer={currentPlayer}
+      />
 
       <HandPanel
         hand={hand}

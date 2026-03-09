@@ -8,6 +8,7 @@ const {
   gamePlayerRepo,
   cardRepo,
   scoreRepo,
+  moveRepo,
 } = require("../repositories");
 
 const {
@@ -74,20 +75,22 @@ async function joinGame(gameId, playerId) {
   const game = await gameRepo.findByIdWithPlayers(gameId);
   if (!game) throw new NotFoundError("Partida no encontrada");
 
+  const alreadyJoined = await gamePlayerRepo.findOne({ gameId, playerId });
+  if (alreadyJoined) {
+    return { joined: true, alreadyJoined: true };
+  }
+
   if (game.status !== "waiting")
     throw new ConflictError("La partida ya inicio");
   if (game.players.length >= game.maxPlayers)
     throw new ConflictError("La partida esta llena");
-
-  const alreadyJoined = await gamePlayerRepo.findOne({ gameId, playerId });
-  if (alreadyJoined) throw new ConflictError("El jugador ya se unio a la partida");
 
   await gamePlayerRepo.create({ gameId, playerId });
 
   const existingScore = await scoreRepo.findOne({ gameId, playerId });
   if (!existingScore) await scoreRepo.create({ gameId, playerId, score: 0 });
 
-  return { joined: true };
+  return { joined: true, alreadyJoined: false };
 }
 
 async function readyGame(gameId, playerId) {
@@ -163,6 +166,56 @@ async function endGame(gameId, playerId) {
   return { ended: true };
 }
 
+async function rematchGame(gameId, playerId) {
+  const game = await gameRepo.findById(gameId);
+  if (!game) throw new NotFoundError("Partida no encontrada");
+
+  if (!game.ownerId || game.ownerId !== playerId) {
+    throw new ForbiddenError("Solo el owner puede reiniciar la partida");
+  }
+  if (game.status !== "ended") {
+    throw new ConflictError("Solo puedes jugar de nuevo al finalizar la partida");
+  }
+
+  const players = await gamePlayerRepo.findAllByGame(gameId);
+  if (!players || players.length < 2) {
+    throw new ConflictError("No hay suficientes jugadores para reiniciar");
+  }
+
+  await cardRepo.destroyByGame(gameId);
+  await moveRepo.destroyByGame?.(gameId);
+  await cardRepo.bulkCreate(buildShuffledDeckWithPositions(gameId));
+  await gamePlayerRepo.resetForRematch?.(gameId);
+
+  game.status = "started";
+  game.direction = 1;
+  game.drawStack = 0;
+  game.currentPlayerId = players[0].playerId;
+
+  const firstCard = await cardRepo.findFirstByGame(gameId);
+  if (!firstCard) throw new ConflictError("No hay cartas en el mazo");
+  await cardRepo.moveToDiscard(firstCard.id);
+  if (firstCard.color === "black") {
+    const colors = ["red", "blue", "green", "yellow"];
+    game.discardTopColor = colors[Math.floor(Math.random() * colors.length)];
+  } else {
+    game.discardTopColor = firstCard.color;
+  }
+  game.discardTopValue = firstCard.value;
+
+  const cardsPerPlayer = 7;
+  for (let round = 0; round < cardsPerPlayer; round += 1) {
+    for (const p of players) {
+      const top = await cardRepo.findDeckTop(gameId);
+      if (!top) throw new ConflictError("El mazo esta vacio");
+      await cardRepo.moveToHand(top.id, p.playerId);
+    }
+  }
+
+  await gameRepo.save(game);
+  return { rematch: true };
+}
+
 async function getGameState(gameId) {
   const game = await gameRepo.findState(gameId);
   if (!game) throw new NotFoundError("Partida no encontrada");
@@ -233,4 +286,5 @@ module.exports = {
   getCurrentPlayer,
   getTopCard,
   getGameScores,
+  rematchGame,
 };

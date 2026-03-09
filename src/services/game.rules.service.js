@@ -261,17 +261,6 @@ async function drawCard(gameId, playerId) {
   const topColor = game.discardTopColor;
   const topValue = game.discardTopValue;
 
-  const playable = await cardRepo.findPlayableInHand(
-    gameId,
-    playerId,
-    topColor,
-    topValue,
-  );
-
-  if (playable && playable.length > 0) {
-    throw new ConflictError("Tienes una carta jugable. Debes jugar.");
-  }
-
   const drawResult = await drawSingleCard(gameId, playerId, topColor, topValue);
 
   await moveRepo.create({

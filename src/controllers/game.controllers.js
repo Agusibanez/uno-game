@@ -46,7 +46,10 @@ const join = asyncHandler(async (req, res) => {
   const userId = requireAuthUserId(req, res);
   if (userId === null) return;
 
-  await service.joinGame(gameId, userId);
+  const result = await service.joinGame(gameId, userId);
+  if (result.alreadyJoined) {
+    return res.json({ message: "Ya estabas en la partida" });
+  }
   res.json({ message: "Te uniste a la partida correctamente" });
 });
 
@@ -92,6 +95,17 @@ const end = asyncHandler(async (req, res) => {
 
   await service.endGame(gameId, userId);
   res.json({ message: "Partida finalizada correctamente" });
+});
+
+const rematch = asyncHandler(async (req, res) => {
+  const gameId = requireParamInt(req, res, "id");
+  if (gameId === null) return;
+
+  const userId = requireAuthUserId(req, res);
+  if (userId === null) return;
+
+  await service.rematchGame(gameId, userId);
+  res.json({ message: "Nueva ronda iniciada. Puntajes conservados." });
 });
 
 const state = asyncHandler(async (req, res) => {
@@ -223,6 +237,7 @@ module.exports = {
   start,
   leave,
   end,
+  rematch,
   state,
   players,
   currentPlayer,

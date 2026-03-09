@@ -24,6 +24,19 @@ function findAllByGame(gameId) {
   return Score.findAll({ where: { gameId } });
 }
 
+async function updateById(gameId, playerId, score) {
+  const [updatedRows] = await Score.update(
+    { score },
+    { where: { gameId, playerId } },
+  );
+
+  if (updatedRows > 0) {
+    return Score.findOne({ where: { gameId, playerId } });
+  }
+
+  return Score.create({ gameId, playerId, score });
+}
+
 module.exports = {
   create,
   findByPk,
@@ -31,4 +44,5 @@ module.exports = {
   destroy,
   destroyByGame,
   findAllByGame,
+  updateById,
 };

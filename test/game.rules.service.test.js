@@ -220,7 +220,7 @@ describe("game.rules.service", () => {
     expect(result.nextPlayer).toBe(3);
   });
 
-  test("drawCard rejects when player has playable card", async () => {
+  test("drawCard allows drawing even when player has playable card", async () => {
     const game = {
       id: 11,
       status: "started",
@@ -231,11 +231,16 @@ describe("game.rules.service", () => {
     };
 
     gameRepo.findById.mockResolvedValue(game);
-    cardRepo.findPlayableInHand.mockResolvedValue([{ id: 1 }]);
+    gamePlayerRepo.findAllByGame.mockResolvedValue([
+      { playerId: 8 },
+      { playerId: 9 },
+    ]);
+    cardRepo.findDeckTop.mockResolvedValue({ id: 901, color: "red", value: "7" });
 
-    await expect(service.drawCard(11, 8)).rejects.toThrow(
-      "Tienes una carta jugable. Debes jugar.",
-    );
+    const result = await service.drawCard(11, 8);
+    expect(result.cardsDrawn).toEqual(["red 7"]);
+    expect(result.nextPlayer).toBe(9);
+    expect(cardRepo.moveToHand).toHaveBeenCalledWith(901, 8);
   });
 
   test("drawCard (normal) draws only one card", async () => {

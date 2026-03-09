@@ -17,6 +17,7 @@ router.post("/games/:id/ready", auth, c.ready);
 router.post("/games/:id/start", auth, c.start);
 router.post("/games/:id/leave", auth, c.leave);
 router.post("/games/:id/end", auth, c.end);
+router.post("/games/:id/rematch", auth, c.rematch);
 router.post("/games/:id/deal", auth, c.deal);
 
 router.get("/games/:id/state", c.state);
